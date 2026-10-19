@@ -23,10 +23,10 @@ pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: DB_NAME,
   port: process.env.DB_PORT || 4000,
-  // Forzamos explícitamente la conexión TLS
+  // Forzamos la conexión segura con los certificados por defecto de Node.js
   ssl: {
     minVersion: 'TLSv1.2',
-    rejectUnauthorized: false
+    rejectUnauthorized: true
   },
   waitForConnections: true,
   connectionLimit: 10,
