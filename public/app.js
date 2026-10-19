@@ -3,10 +3,8 @@ let currentUser = null;
 let importRows = [];
 let currentMaintenanceDeviceId = null;
 
-// 🚫 PALABRAS GROSERAS
 const PALABRAS_GROSERAS = ['puta', 'mierda', 'pendejo', 'cabron', 'cabrón', 'verga', 'coño', 'joder', 'estupido', 'estúpido', 'idiota', 'culero', 'marico', 'maricón', 'zorra', 'perra', 'gonorrea', 'malparido', 'hijueputa', 'imbecil', 'imbécil'];
 
-// DOM Elements
 const tableBody = document.getElementById('deviceTableBody');
 const emptyMessage = document.getElementById('emptyMessage');
 const totalCountSpan = document.getElementById('totalCount');
@@ -175,7 +173,6 @@ async function handleNewUserSubmit(e) {
   } catch (err) { showToast(err.message, true); }
 }
 
-// ⏱️ AUTO-REFRESH
 async function cargarDispositivos(silencioso = false) {
   try {
     if (silencioso && document.querySelector('.modal-overlay.active')) {
@@ -218,13 +215,14 @@ function renderTable() {
 
   let html = '';
   filtered.forEach(d => {
+    // AQUI SE CORRIGIO LA UBICACION Y EL DUEÑO
     html += `
       <tr data-id="${d.id}">
         <td style="font-weight: 500;">${escapeHtml(d.fabricante || '—')} ${escapeHtml(d.modelo || '')}</td>
         <td>${escapeHtml(d.tipo || '—')}</td>
         <td>${escapeHtml(d.fabricante || '—')} / ${escapeHtml(d.modelo || '—')}</td>
-        <td>${escapeHtml(d.departamento || '—')} - ${escapeHtml(d.usuario_responsable || '—')}</td>
-        <td>—</td>
+        <td>${escapeHtml(d.departamento || '—')}</td> <!-- UBICACIÓN -->
+        <td>${escapeHtml(d.usuario_responsable || '—')}</td> <!-- DUEÑO -->
         <td>${getBadgeEstado(d.estado)}</td>
         <td>
           <div class="actions">
@@ -625,8 +623,5 @@ function initEvents() {
   initEvents();
   await cargarDispositivos();
 
-  // ⏱️ AUTO-REFRESH
-  setInterval(() => {
-    cargarDispositivos(true);
-  }, 10000);
+  setInterval(() => { cargarDispositivos(true); }, 10000);
 })();

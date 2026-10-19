@@ -1,9 +1,13 @@
 let todosMantenimientos = [];
+let isAdmin = false;
+
 const tableBody = document.getElementById('maintenanceTableBody');
 const emptyMsg = document.getElementById('emptyMantenimiento');
 const searchInput = document.getElementById('searchMantenimiento');
 const filterMarca = document.getElementById('filterMarca');
 const toast = document.getElementById('toast');
+const deleteSelectedHistoryBtn = document.getElementById('deleteSelectedHistoryBtn');
+const selectAllHistory = document.getElementById('selectAllHistory');
 
 function showToast(msg) {
   toast.textContent = msg;
@@ -18,6 +22,18 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// Verificar si es admin
+async function verificarAdmin() {
+  try {
+    const res = await fetch('/api/session');
+    const data = await res.json();
+    if (data.autenticado && data.usuario.rol === 'admin') {
+      isAdmin = true;
+      deleteSelectedHistoryBtn.style.display = 'flex';
+    }
+  } catch (e) {}
+}
+
 async function cargarMantenimientos() {
   try {
     const res = await fetch('/api/todos-mantenimientos', { cache: 'no-store' });
@@ -25,11 +41,13 @@ async function cargarMantenimientos() {
     todosMantenimientos = await res.json();
     
     const marcasUnicas = [...new Set(todosMantenimientos.map(m => m.fabricante).filter(Boolean))].sort();
+    const valActual = filterMarca.value;
     filterMarca.innerHTML = '<option value="">Todas las marcas</option>';
     marcasUnicas.forEach(marca => {
       const opt = document.createElement('option');
       opt.value = marca;
       opt.textContent = marca;
+      if(marca === valActual) opt.selected = true;
       filterMarca.appendChild(opt);
     });
 
@@ -66,6 +84,7 @@ function renderTabla() {
     const fecha = new Date(m.fecha).toLocaleString('es-ES');
     html += `
       <tr>
+        <td><input type="checkbox" class="history-checkbox" value="${m.id}" style="cursor: pointer; width: 16px; height: 16px;"></td>
         <td style="font-size:0.85rem; color:#64748b;">${fecha}</td>
         <td style="font-weight:600;">${escapeHtml(m.fabricante)} ${escapeHtml(m.modelo)} <br><span style="font-size:0.75rem;color:#94a3b8;">Serie: ${escapeHtml(m.serie || 'N/A')}</span></td>
         <td><span class="badge badge-disponible">${escapeHtml(m.fabricante || '—')}</span></td>
@@ -78,8 +97,49 @@ function renderTabla() {
   tableBody.innerHTML = html;
 }
 
+// Seleccionar todos
+selectAllHistory.addEventListener('change', (e) => {
+  const checkboxes = document.querySelectorAll('.history-checkbox');
+  checkboxes.forEach(cb => cb.checked = e.target.checked);
+});
+
+// Eliminar seleccionados
+deleteSelectedHistoryBtn.addEventListener('click', async () => {
+  const checkboxes = document.querySelectorAll('.history-checkbox:checked');
+  if (checkboxes.length === 0) {
+    return showToast('Selecciona al menos un registro para eliminar');
+  }
+
+  if (!confirm(`¿Estás seguro de eliminar ${checkboxes.length} mantenimiento(s)? Esta acción no se puede deshacer.`)) return;
+
+  deleteSelectedHistoryBtn.disabled = true;
+  deleteSelectedHistoryBtn.textContent = 'Eliminando...';
+
+  let errores = 0;
+  for (const cb of checkboxes) {
+    try {
+      const res = await fetch(`/api/mantenimientos/${cb.value}`, { method: 'DELETE' });
+      if (!res.ok) errores++;
+    } catch (e) { errores++; }
+  }
+
+  deleteSelectedHistoryBtn.disabled = false;
+  deleteSelectedHistoryBtn.innerHTML = '🗑️ Eliminar Seleccionados';
+  selectAllHistory.checked = false;
+
+  if (errores > 0) {
+    showToast(`Se eliminaron algunos, pero fallaron ${errores}`, true);
+  } else {
+    showToast('Registros eliminados correctamente');
+  }
+  cargarMantenimientos();
+});
+
 searchInput.addEventListener('input', renderTabla);
 filterMarca.addEventListener('change', renderTabla);
 
 setInterval(cargarMantenimientos, 10000);
+
+// Iniciar
+verificarAdmin();
 cargarMantenimientos();

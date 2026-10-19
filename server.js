@@ -27,7 +27,6 @@ function requireAuth(req, res, next) {
   return res.redirect('/login.html');
 }
 
-// ---------- AUTENTICACIÓN ----------
 app.post('/api/login', async (req, res) => {
   const { usuario, password } = req.body;
   if (!usuario || !password) return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
@@ -71,7 +70,6 @@ app.post('/api/cambiar-password', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Error al cambiar la contraseña' }); }
 });
 
-// ---------- USUARIOS ----------
 app.get('/api/usuarios', requireAuth, async (req, res) => {
   if (req.session.rol !== 'admin') return res.status(403).json({ error: 'Solo administradores' });
   try {
@@ -96,7 +94,6 @@ app.post('/api/usuarios', requireAuth, async (req, res) => {
   }
 });
 
-// ---------- DISPOSITIVOS ----------
 app.get('/api/dispositivos', requireAuth, async (req, res) => {
   try {
     const pool = getPool();
@@ -143,7 +140,7 @@ app.delete('/api/dispositivos/:id', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Error al eliminar' }); }
 });
 
-// ---------- MANTENIMIENTOS ----------
+// MANTENIMIENTOS (CRUD)
 app.get('/api/dispositivos/:id/mantenimientos', requireAuth, async (req, res) => {
   try {
     const pool = getPool();
@@ -162,7 +159,6 @@ app.post('/api/dispositivos/:id/mantenimientos', requireAuth, async (req, res) =
   } catch (err) { res.status(500).json({ error: 'Error BD: ' + err.message }); }
 });
 
-// ---------- NUEVA RUTA: HISTORIAL GENERAL ----------
 app.get('/api/todos-mantenimientos', requireAuth, async (req, res) => {
   try {
     const pool = getPool();
@@ -174,6 +170,16 @@ app.get('/api/todos-mantenimientos', requireAuth, async (req, res) => {
     `);
     res.json(rows);
   } catch (err) { res.status(500).json({ error: 'Error al obtener historial general' }); }
+});
+
+// NUEVO: Eliminar un mantenimiento (Solo Admin)
+app.delete('/api/mantenimientos/:id', requireAuth, async (req, res) => {
+  if (req.session.rol !== 'admin') return res.status(403).json({ error: 'Solo administradores pueden eliminar historiales' });
+  try {
+    const pool = getPool();
+    await pool.execute('DELETE FROM mantenimientos WHERE id = ?', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: 'Error al eliminar mantenimiento' }); }
 });
 
 app.get('/', requireAuth, (req, res) => {

@@ -25,6 +25,8 @@
         <select id="filterMarca">
           <option value="">Todas las marcas</option>
         </select>
+        <!-- BOTÓN PARA BORRAR SELECCIONADOS (OCULTO POR DEFECTO) -->
+        <button class="btn-primary" id="deleteSelectedHistoryBtn" style="background:#dc2626; box-shadow: 0 6px 16px rgba(220, 38, 38, 0.25); display: none;">🗑️ Eliminar Seleccionados</button>
       </div>
     </div>
 
@@ -32,6 +34,7 @@
       <table>
         <thead>
           <tr>
+            <th style="width: 40px;"><input type="checkbox" id="selectAllHistory" style="cursor: pointer; width: 16px; height: 16px;"></th>
             <th>FECHA</th>
             <th>EQUIPO</th>
             <th>MARCA</th>
