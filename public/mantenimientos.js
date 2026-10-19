@@ -21,7 +21,7 @@ function escapeHtml(text) {
 async function cargarMantenimientos() {
   try {
     const res = await fetch('/api/todos-mantenimientos', { cache: 'no-store' });
-    if (res.status === 401) { window.location.href = '/login.html'; return; }
+    if (res.status === 401) { window.location.href = 'index.html'; return; }
     todosMantenimientos = await res.json();
     
     // Llenar el filtro de marcas
