@@ -6,14 +6,8 @@
   <title>Iniciar sesión | Registro de Dispositivos</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; }
-    body {
-      min-height: 100vh; display: flex; align-items: center; justify-content: center;
-      background: linear-gradient(135deg, #1e2b3c 0%, #2a6df4 100%); padding: 1.5rem;
-    }
-    .login-card {
-      background: white; border-radius: 28px; padding: 2.8rem 2.4rem; max-width: 420px; width: 100%;
-      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3); animation: fadeIn 0.4s ease;
-    }
+    body { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1e2b3c 0%, #2a6df4 100%); padding: 1.5rem; }
+    .login-card { background: white; border-radius: 28px; padding: 2.8rem 2.4rem; max-width: 420px; width: 100%; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3); animation: fadeIn 0.4s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     .login-icon { width: 70px; height: 70px; background: #eef4ff; border-radius: 22px; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 1.2rem; }
     h1 { text-align: center; color: #1e2b3c; font-size: 1.6rem; margin-bottom: 0.4rem; }
@@ -48,52 +42,26 @@
       </div>
       <button type="submit" id="submitBtn">Ingresar</button>
     </form>
-    <div class="hint">
-      Credenciales por defecto:<br>
-      <strong>admin</strong> / <strong>admin123</strong>
-    </div>
+    <div class="hint">Credenciales por defecto:<br><strong>admin</strong> / <strong>admin123</strong></div>
   </div>
-
   <script>
     const form = document.getElementById('loginForm');
     const errorMsg = document.getElementById('errorMsg');
     const submitBtn = document.getElementById('submitBtn');
-
-    fetch('/api/session')
-      .then(r => r.json())
-      .then(data => { if (data.autenticado) window.location.href = '/'; });
-
+    fetch('/api/session').then(r => r.json()).then(data => { if (data.autenticado) window.location.href = '/'; });
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       errorMsg.classList.remove('show');
       submitBtn.disabled = true;
       submitBtn.textContent = 'Ingresando...';
-
       const usuario = document.getElementById('usuario').value.trim();
       const password = document.getElementById('password').value;
-
       try {
-        const res = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ usuario, password })
-        });
+        const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usuario, password }) });
         const data = await res.json();
-
-        if (!res.ok) {
-          errorMsg.textContent = data.error || 'Error al iniciar sesión';
-          errorMsg.classList.add('show');
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Ingresar';
-          return;
-        }
+        if (!res.ok) { errorMsg.textContent = data.error || 'Error al iniciar sesión'; errorMsg.classList.add('show'); submitBtn.disabled = false; submitBtn.textContent = 'Ingresar'; return; }
         window.location.href = '/';
-      } catch (err) {
-        errorMsg.textContent = 'Error de conexión con el servidor';
-        errorMsg.classList.add('show');
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Ingresar';
-      }
+      } catch (err) { errorMsg.textContent = 'Error de conexión con el servidor'; errorMsg.classList.add('show'); submitBtn.disabled = false; submitBtn.textContent = 'Ingresar'; }
     });
   </script>
 </body>

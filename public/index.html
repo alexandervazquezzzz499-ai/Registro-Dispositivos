@@ -12,9 +12,7 @@
     <div class="header">
       <h1><span>📋</span> Registro de Dispositivos</h1>
       <div class="user-area">
-        <div class="stats-badge">
-          Total equipos <span class="total-count" id="totalCount">0</span>
-        </div>
+        <div class="stats-badge">Total equipos <span class="total-count" id="totalCount">0</span></div>
         <div class="user-menu">
           <div class="user-info">
             <span class="user-avatar" id="userAvatar">A</span>
@@ -56,6 +54,7 @@
           <option value="Otro">Otro</option>
         </select>
         
+        <!-- BOTÓN DE HISTORIAL -->
         <button class="btn-primary" onclick="window.location.href='/mantenimientos.html'" style="background:#16a34a; box-shadow: 0 6px 16px rgba(22, 163, 74, 0.25);">🛠️ Ver Historial General</button>
         
         <button class="btn-import" id="importExcelBtn">📥 Importar Excel</button>
@@ -159,14 +158,12 @@
         </div>
         <button type="submit" class="btn-primary" style="margin-top:10px; width:100%;">Crear Usuario</button>
       </form>
-
       <div class="import-preview-wrapper" style="max-height: 250px;">
         <table class="import-preview">
           <thead><tr><th>ID</th><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Creado</th></tr></thead>
           <tbody id="usersTableBody"></tbody>
         </table>
       </div>
-
       <div class="modal-actions" style="margin-top:15px;">
         <button type="button" class="btn-secondary" id="closeUsersModalBtn">Cerrar</button>
       </div>

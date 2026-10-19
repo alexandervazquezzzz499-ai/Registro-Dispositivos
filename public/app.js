@@ -3,7 +3,7 @@ let currentUser = null;
 let importRows = [];
 let currentMaintenanceDeviceId = null;
 
-// 🚫 LISTA DE PALABRAS GROSERAS
+// 🚫 PALABRAS GROSERAS
 const PALABRAS_GROSERAS = ['puta', 'mierda', 'pendejo', 'cabron', 'cabrón', 'verga', 'coño', 'joder', 'estupido', 'estúpido', 'idiota', 'culero', 'marico', 'maricón', 'zorra', 'perra', 'gonorrea', 'malparido', 'hijueputa', 'imbecil', 'imbécil'];
 
 // DOM Elements
@@ -37,13 +37,11 @@ const passwordForm = document.getElementById('passwordForm');
 const closePasswordModalBtn = document.getElementById('closePasswordModalBtn');
 const changePasswordBtn = document.getElementById('changePasswordBtn');
 const logoutBtn = document.getElementById('logoutBtn');
-
 const manageUsersBtn = document.getElementById('manageUsersBtn');
 const usersModalOverlay = document.getElementById('usersModalOverlay');
 const closeUsersModalBtn = document.getElementById('closeUsersModalBtn');
 const newUserForm = document.getElementById('newUserForm');
 const usersTableBody = document.getElementById('usersTableBody');
-
 const confirmModalOverlay = document.getElementById('confirmModalOverlay');
 const confirmMessage = document.getElementById('confirmMessage');
 const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
@@ -177,9 +175,10 @@ async function handleNewUserSubmit(e) {
   } catch (err) { showToast(err.message, true); }
 }
 
+// ⏱️ AUTO-REFRESH
 async function cargarDispositivos(silencioso = false) {
   try {
-    if (silencioso && (document.querySelector('.modal-overlay.active') || document.activeElement.tagName === 'INPUT')) {
+    if (silencioso && document.querySelector('.modal-overlay.active')) {
       return; 
     }
     devices = await apiFetch('/api/dispositivos');
@@ -490,7 +489,6 @@ async function manejarArchivoSeleccionado(file) {
       const workbook = XLSX.read(buffer, { type: 'array' });
       const hoja = workbook.Sheets[workbook.SheetNames[0]];
       const matrizCruda = XLSX.utils.sheet_to_json(hoja, { header: 1, defval: '' });
-      
       let indiceFilaEncabezado = -1;
       for (let i = 0; i < matrizCruda.length; i++) {
         const fila = matrizCruda[i].map(c => normalizar(String(c)));
@@ -499,12 +497,9 @@ async function manejarArchivoSeleccionado(file) {
           break;
         }
       }
-      
       if (indiceFilaEncabezado === -1) { showToast('No se encontraron los encabezados en el archivo.', true); return; }
-      
       const encabezados = matrizCruda[indiceFilaEncabezado];
       const filasDatos = matrizCruda.slice(indiceFilaEncabezado + 1);
-      
       filasCrudas = filasDatos.map(filaArray => {
         const obj = {};
         encabezados.forEach((encabezado, index) => {
@@ -517,10 +512,8 @@ async function manejarArchivoSeleccionado(file) {
     } else {
       showToast('Formato no soportado. Usa .xls, .xlsx o .csv', true); return;
     }
-    
     filasCrudas = filasCrudas.filter(fila => Object.values(fila).some(v => String(v).trim() !== ''));
     if (filasCrudas.length === 0) { showToast('El archivo está vacío.', true); return; }
-    
     importRows = procesarFilas(filasCrudas);
     mostrarPrevisualizacion(importRows);
     importModalOverlay.classList.add('active');
@@ -632,7 +625,7 @@ function initEvents() {
   initEvents();
   await cargarDispositivos();
 
-  // ⏱️ AUTO-REFRESH CADA 10 SEGUNDOS
+  // ⏱️ AUTO-REFRESH
   setInterval(() => {
     cargarDispositivos(true);
   }, 10000);

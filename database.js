@@ -6,7 +6,6 @@ const DB_NAME = process.env.DB_NAME || 'dispositivos_db';
 let pool = null;
 
 async function initDB() {
-  // Conexión inicial para crear la base de datos si no existe
   const conn = await mysql.createConnection({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -18,7 +17,6 @@ async function initDB() {
   await conn.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
   await conn.end();
 
-  // Pool de conexiones para la aplicación
   pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -31,7 +29,6 @@ async function initDB() {
     queueLimit: 0
   });
 
-  // 1. Tabla Usuarios
   await pool.query(`
     CREATE TABLE IF NOT EXISTS usuarios (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -43,7 +40,6 @@ async function initDB() {
     )
   `);
 
-  // 2. Tabla Dispositivos (Campos completos)
   await pool.query(`
     CREATE TABLE IF NOT EXISTS dispositivos (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -66,7 +62,6 @@ async function initDB() {
     )
   `);
 
-  // 3. Tabla Mantenimientos
   await pool.query(`
     CREATE TABLE IF NOT EXISTS mantenimientos (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -79,7 +74,6 @@ async function initDB() {
     )
   `);
 
-  // Crear usuario admin por defecto si no existe
   const [rows] = await pool.execute('SELECT id FROM usuarios WHERE usuario = ?', ['admin']);
   if (rows.length === 0) {
     const hash = bcrypt.hashSync('admin123', 10);

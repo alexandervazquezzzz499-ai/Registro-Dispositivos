@@ -21,12 +21,10 @@ function escapeHtml(text) {
 async function cargarMantenimientos() {
   try {
     const res = await fetch('/api/todos-mantenimientos', { cache: 'no-store' });
-    if (res.status === 401) { window.location.href = 'index.html'; return; }
+    if (res.status === 401) { window.location.href = '/login.html'; return; }
     todosMantenimientos = await res.json();
     
-    // Llenar el filtro de marcas
     const marcasUnicas = [...new Set(todosMantenimientos.map(m => m.fabricante).filter(Boolean))].sort();
-    // Limpiar opciones previas (menos la primera)
     filterMarca.innerHTML = '<option value="">Todas las marcas</option>';
     marcasUnicas.forEach(marca => {
       const opt = document.createElement('option');
@@ -53,7 +51,6 @@ function renderTabla() {
       (m.modelo && m.modelo.toLowerCase().includes(texto));
       
     const coincideMarca = !marcaFiltro || m.fabricante === marcaFiltro;
-
     return coincideTexto && coincideMarca;
   });
 
@@ -84,8 +81,5 @@ function renderTabla() {
 searchInput.addEventListener('input', renderTabla);
 filterMarca.addEventListener('change', renderTabla);
 
-// Actualización en tiempo real cada 10 segundos
 setInterval(cargarMantenimientos, 10000);
-
-// Iniciar
 cargarMantenimientos();
