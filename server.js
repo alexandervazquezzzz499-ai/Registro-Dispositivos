@@ -9,8 +9,8 @@ const { initDB, getPool } = require('./database');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -112,13 +112,13 @@ app.get('/api/dispositivos', requireAuth, async (req, res) => {
 
 app.post('/api/dispositivos', requireAuth, async (req, res) => {
   try {
-    const { departamento, usuario_responsable, fabricante, modelo, tipo, estado, procesador, nucleos, frecuencia, ram_total, detalles_ram } = req.body;
+    const { departamento, usuario_responsable, fabricante, modelo, tipo, estado, serie, procesador, nucleos, frecuencia, ram_total, detalles_ram } = req.body;
     if (!departamento || !tipo) return res.status(400).json({ error: 'Departamento y Tipo son obligatorios.' });
     const pool = getPool();
     const [result] = await pool.execute(`
-      INSERT INTO dispositivos (departamento, usuario_responsable, fabricante, modelo, tipo, estado, procesador, nucleos, frecuencia, ram_total, detalles_ram, creado_por)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [departamento, usuario_responsable || '', fabricante || '', modelo || '', tipo, estado || 'Activo', procesador || '', nucleos || '', frecuencia || '', ram_total || '', detalles_ram || '', req.session.userId || null]);
+      INSERT INTO dispositivos (departamento, usuario_responsable, fabricante, modelo, tipo, estado, serie, procesador, nucleos, frecuencia, ram_total, detalles_ram, creado_por)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [departamento, usuario_responsable || '', fabricante || '', modelo || '', tipo, estado || 'Activo', serie || '', procesador || '', nucleos || '', frecuencia || '', ram_total || '', detalles_ram || '', req.session.userId || null]);
     res.json({ ok: true, id: result.insertId });
   } catch (err) { res.status(500).json({ error: 'Error BD: ' + err.message }); }
 });
@@ -126,11 +126,11 @@ app.post('/api/dispositivos', requireAuth, async (req, res) => {
 app.put('/api/dispositivos/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { departamento, usuario_responsable, fabricante, modelo, tipo, estado, procesador, nucleos, frecuencia, ram_total, detalles_ram } = req.body;
+    const { departamento, usuario_responsable, fabricante, modelo, tipo, estado, serie, procesador, nucleos, frecuencia, ram_total, detalles_ram } = req.body;
     const pool = getPool();
     await pool.execute(`
-      UPDATE dispositivos SET departamento = ?, usuario_responsable = ?, fabricante = ?, modelo = ?, tipo = ?, estado = ?, procesador = ?, nucleos = ?, frecuencia = ?, ram_total = ?, detalles_ram = ? WHERE id = ?
-    `, [departamento, usuario_responsable || '', fabricante || '', modelo || '', tipo, estado || 'Activo', procesador || '', nucleos || '', frecuencia || '', ram_total || '', detalles_ram || '', id]);
+      UPDATE dispositivos SET departamento = ?, usuario_responsable = ?, fabricante = ?, modelo = ?, tipo = ?, estado = ?, serie = ?, procesador = ?, nucleos = ?, frecuencia = ?, ram_total = ?, detalles_ram = ? WHERE id = ?
+    `, [departamento, usuario_responsable || '', fabricante || '', modelo || '', tipo, estado || 'Activo', serie || '', procesador || '', nucleos || '', frecuencia || '', ram_total || '', detalles_ram || '', id]);
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: 'Error BD: ' + err.message }); }
 });
@@ -157,11 +157,23 @@ app.post('/api/dispositivos/:id/mantenimientos', requireAuth, async (req, res) =
   if (!falla || !solucion) return res.status(400).json({ error: 'Falla y Solución son obligatorios.' });
   try {
     const pool = getPool();
-    await pool.execute(`
-      INSERT INTO mantenimientos (dispositivo_id, falla, solucion, tecnico) VALUES (?, ?, ?, ?)
-    `, [req.params.id, falla, solucion, req.session.nombre]);
+    await pool.execute(`INSERT INTO mantenimientos (dispositivo_id, falla, solucion, tecnico) VALUES (?, ?, ?, ?)`, [req.params.id, falla, solucion, req.session.nombre]);
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: 'Error BD: ' + err.message }); }
+});
+
+// ---------- NUEVA RUTA: HISTORIAL GENERAL ----------
+app.get('/api/todos-mantenimientos', requireAuth, async (req, res) => {
+  try {
+    const pool = getPool();
+    const [rows] = await pool.query(`
+      SELECT m.*, d.fabricante, d.modelo, d.departamento, d.serie
+      FROM mantenimientos m
+      JOIN dispositivos d ON m.dispositivo_id = d.id
+      ORDER BY m.fecha DESC
+    `);
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: 'Error al obtener historial general' }); }
 });
 
 app.get('/', requireAuth, (req, res) => {
@@ -171,9 +183,7 @@ app.get('/', requireAuth, (req, res) => {
 (async () => {
   try {
     await initDB();
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`\n🚀 Servidor en puerto ${PORT}`);
-    });
+    app.listen(PORT, '0.0.0.0', () => { console.log(`\n🚀 Servidor en puerto ${PORT}`); });
   } catch (err) {
     console.error('❌ Error BD:', err);
     process.exit(1);

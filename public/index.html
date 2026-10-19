@@ -56,6 +56,8 @@
           <option value="Otro">Otro</option>
         </select>
         
+        <button class="btn-primary" onclick="window.location.href='/mantenimientos.html'" style="background:#16a34a; box-shadow: 0 6px 16px rgba(22, 163, 74, 0.25);">🛠️ Ver Historial General</button>
+        
         <button class="btn-import" id="importExcelBtn">📥 Importar Excel</button>
         <button class="btn-export" id="exportExcelBtn">⬇️ Exportar a Excel</button>
         <button class="btn-primary" id="openModalBtn">+ Nuevo dispositivo</button>
@@ -112,8 +114,9 @@
             <label>Estado *</label>
             <select id="estado" required>
               <option value="Activo">Activo</option>
-              <option value="En Mantenimiento">En Mantenimiento</option>
+              <option value="Mantenimiento">Mantenimiento</option>
               <option value="Disponible">Disponible</option>
+              <option value="Activo con fallas">Activo con fallas</option>
               <option value="Baja">Baja</option>
             </select>
           </div>
@@ -121,6 +124,7 @@
           <div class="form-group"><label>Usuario</label><input type="text" id="usuario_responsable"></div>
           <div class="form-group"><label>Fabricante</label><input type="text" id="fabricante"></div>
           <div class="form-group"><label>Modelo</label><input type="text" id="modelo"></div>
+          <div class="form-group"><label>N° de Serie</label><input type="text" id="serie"></div>
           <div class="form-group"><label>Procesador</label><input type="text" id="procesador"></div>
           <div class="form-group"><label>Núcleos / CPUs</label><input type="text" id="nucleos"></div>
           <div class="form-group"><label>Frecuencia CPU</label><input type="text" id="frecuencia"></div>

@@ -3,6 +3,9 @@ let currentUser = null;
 let importRows = [];
 let currentMaintenanceDeviceId = null;
 
+// 🚫 LISTA DE PALABRAS GROSERAS
+const PALABRAS_GROSERAS = ['puta', 'mierda', 'pendejo', 'cabron', 'cabrón', 'verga', 'coño', 'joder', 'estupido', 'estúpido', 'idiota', 'culero', 'marico', 'maricón', 'zorra', 'perra', 'gonorrea', 'malparido', 'hijueputa', 'imbecil', 'imbécil'];
+
 // DOM Elements
 const tableBody = document.getElementById('deviceTableBody');
 const emptyMessage = document.getElementById('emptyMessage');
@@ -35,20 +38,17 @@ const closePasswordModalBtn = document.getElementById('closePasswordModalBtn');
 const changePasswordBtn = document.getElementById('changePasswordBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 
-// User Management
 const manageUsersBtn = document.getElementById('manageUsersBtn');
 const usersModalOverlay = document.getElementById('usersModalOverlay');
 const closeUsersModalBtn = document.getElementById('closeUsersModalBtn');
 const newUserForm = document.getElementById('newUserForm');
 const usersTableBody = document.getElementById('usersTableBody');
 
-// Confirmation Modal
 const confirmModalOverlay = document.getElementById('confirmModalOverlay');
 const confirmMessage = document.getElementById('confirmMessage');
 const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
 const acceptConfirmBtn = document.getElementById('acceptConfirmBtn');
 
-// Form Fields
 const fieldId = document.getElementById('deviceId');
 const fieldDepartamento = document.getElementById('departamento');
 const fieldUsuario = document.getElementById('usuario_responsable');
@@ -79,6 +79,17 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+function normalizar(texto) {
+  if (!texto) return '';
+  return String(texto).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function contieneGroserias(texto) {
+  if (!texto) return false;
+  const limpio = normalizar(texto);
+  return PALABRAS_GROSERAS.some(palabra => limpio.includes(palabra));
+}
+
 function getBadgeEstado(estado) {
   if (!estado) estado = 'Activo';
   const est = estado.toLowerCase();
@@ -86,12 +97,8 @@ function getBadgeEstado(estado) {
   if (est.includes('mantenimiento')) clase = 'badge-mantenimiento';
   else if (est.includes('baja')) clase = 'badge-baja';
   else if (est.includes('disponible')) clase = 'badge-disponible';
+  else if (est.includes('falla')) clase = 'badge-falla';
   return `<span class="badge ${clase}">${escapeHtml(estado)}</span>`;
-}
-
-function normalizar(texto) {
-  if (!texto) return '';
-  return String(texto).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
 
 function mapearColumna(col) {
@@ -113,30 +120,22 @@ function mapearColumna(col) {
 }
 
 async function apiFetch(url, options = {}) {
-  const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options });
+  const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, cache: 'no-store', ...options });
   if (res.status === 401) { window.location.href = '/login.html'; throw new Error('No autorizado'); }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'Error en la petición');
   return data;
 }
 
-// ✅ FUNCIÓN REPARADA PARA EL MODAL DE CONFIRMACIÓN
 function mostrarConfirmacion(mensaje, callbackAceptar, esEliminar = false) {
   confirmMessage.innerHTML = mensaje;
-  
-  // Seleccionamos el botón directamente del DOM
   const btnAceptar = document.getElementById('acceptConfirmBtn');
-  
-  // Forzamos que tenga el texto y el color correcto
   btnAceptar.textContent = 'Aceptar';
-  btnAceptar.style.backgroundColor = esEliminar ? '#dc2626' : '#2a6df4'; // Rojo para eliminar, azul para otros
-  
-  // Asignamos el evento (esto sobrescribe cualquier evento anterior sin romper nada)
+  btnAceptar.style.backgroundColor = esEliminar ? '#dc2626' : '#2a6df4';
   btnAceptar.onclick = () => {
     confirmModalOverlay.classList.remove('active');
     callbackAceptar();
   };
-  
   confirmModalOverlay.classList.add('active');
 }
 
@@ -158,9 +157,15 @@ async function abrirModalUsuarios() {
 
 async function handleNewUserSubmit(e) {
   e.preventDefault();
+  const nombre = document.getElementById('newUserNombre').value.trim();
+  const usuario = document.getElementById('newUserUsername').value.trim();
+  
+  if (contieneGroserias(nombre) || contieneGroserias(usuario)) {
+    return showToast('El nombre o usuario contiene palabras no permitidas.', true);
+  }
+
   const payload = {
-    nombre: document.getElementById('newUserNombre').value.trim(),
-    usuario: document.getElementById('newUserUsername').value.trim(),
+    nombre: nombre, usuario: usuario,
     password: document.getElementById('newUserPassword').value,
     rol: document.getElementById('newUserRol').value
   };
@@ -172,11 +177,16 @@ async function handleNewUserSubmit(e) {
   } catch (err) { showToast(err.message, true); }
 }
 
-async function cargarDispositivos() {
+async function cargarDispositivos(silencioso = false) {
   try {
+    if (silencioso && (document.querySelector('.modal-overlay.active') || document.activeElement.tagName === 'INPUT')) {
+      return; 
+    }
     devices = await apiFetch('/api/dispositivos');
     renderTable();
-  } catch (err) { showToast(err.message, true); }
+  } catch (err) { 
+    if (!silencioso) showToast(err.message, true); 
+  }
 }
 
 function getFilteredDevices() {
@@ -215,7 +225,7 @@ function renderTable() {
         <td>${escapeHtml(d.tipo || '—')}</td>
         <td>${escapeHtml(d.fabricante || '—')} / ${escapeHtml(d.modelo || '—')}</td>
         <td>${escapeHtml(d.departamento || '—')} - ${escapeHtml(d.usuario_responsable || '—')}</td>
-        <td>—</td> <!-- DUEÑO -->
+        <td>—</td>
         <td>${getBadgeEstado(d.estado)}</td>
         <td>
           <div class="actions">
@@ -283,7 +293,13 @@ async function handleMaintenanceSubmit(e) {
   e.preventDefault();
   const falla = document.getElementById('falla').value.trim();
   const solucion = document.getElementById('solucion').value.trim();
+  
   if (!falla || !solucion) return showToast('Falla y Solución son obligatorios', true);
+  
+  if (contieneGroserias(falla) || contieneGroserias(solucion)) {
+    return showToast('El texto contiene palabras no permitidas.', true);
+  }
+
   try {
     await apiFetch(`/api/dispositivos/${currentMaintenanceDeviceId}/mantenimientos`, { method: 'POST', body: JSON.stringify({ falla, solucion }) });
     showToast('Mantenimiento guardado correctamente');
@@ -342,7 +358,16 @@ async function handleFormSubmit(e) {
     procesador: fieldProcesador.value.trim(), nucleos: fieldNucleos.value.trim(), frecuencia: fieldFrecuencia.value.trim(),
     ram_total: fieldRamTotal.value.trim(), detalles_ram: fieldDetallesRam.value.trim()
   };
+  
   if (!payload.departamento || !payload.tipo) return showToast('Departamento y Tipo son obligatorios', true);
+
+  const camposAValidar = [payload.departamento, payload.usuario_responsable, payload.fabricante, payload.modelo, payload.procesador, payload.detalles_ram];
+  for (let campo of camposAValidar) {
+    if (contieneGroserias(campo)) {
+      return showToast('El formulario contiene palabras no permitidas.', true);
+    }
+  }
+
   try {
     if (id) {
       await apiFetch(`/api/dispositivos/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
@@ -603,6 +628,12 @@ function initEvents() {
     document.getElementById('userAvatar').textContent = currentUser.nombre.charAt(0).toUpperCase();
     if (currentUser.rol === 'admin') { manageUsersBtn.style.display = 'flex'; }
   } catch { window.location.href = '/login.html'; }
+  
   initEvents();
   await cargarDispositivos();
+
+  // ⏱️ AUTO-REFRESH CADA 10 SEGUNDOS
+  setInterval(() => {
+    cargarDispositivos(true);
+  }, 10000);
 })();
