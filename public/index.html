@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro de Dispositivos | Empresa</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <div class="header">
+      <h1><span>📋</span> Registro de Dispositivos</h1>
+      <div class="user-area">
+        <div class="stats-badge">
+          <span>Total equipos <span class="total-count" id="totalCount">0</span></span>
+        </div>
+        <div class="user-menu">
+          <div class="user-info">
+            <span class="user-avatar" id="userAvatar">A</span>
+            <div class="user-details">
+              <span class="user-name" id="userName">Usuario</span>
+              <span class="user-role" id="userRole">rol</span>
+            </div>
+          </div>
+          <div class="user-actions">
+            <button class="btn-icon" id="manageUsersBtn" title="Gestionar usuarios" style="display:none;">👥</button>
+            <button class="btn-icon" id="changePasswordBtn" title="Cambiar contraseña">🔑</button>
+            <button class="btn-icon" id="logoutBtn" title="Cerrar sesión">🚪</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box">
+        <span>🔍</span>
+        <input type="text" id="searchInput" placeholder="Buscar por nombre, marca, modelo o ubicación...">
+      </div>
+      <div class="filter-group">
+        <select id="filterType">
+          <option value="">Todos los tipos</option>
+          <option value="Portátil">Portátil</option>
+          <option value="Escritorio">Escritorio</option>
+          <option value="Monitor">Monitor</option>
+          <option value="Impresora">Impresora</option>
+          <option value="Servidor">Servidor</option>
+          <option value="Tablet">Tablet</option>
+          <option value="Smartphone">Smartphone</option>
+          <option value="Router">Router</option>
+          <option value="Otro">Otro</option>
+        </select>
+        <select id="filterStatus">
+          <option value="">Todos los estados</option>
+          <option value="Activo">Activo</option>
+          <option value="Mantenimiento">Mantenimiento</option>
+          <option value="Baja">Baja</option>
+          <option value="Disponible">Disponible</option>
+          <option value="Asignado">Asignado</option>
+        </select>
+        <button class="btn-primary" id="openModalBtn">＋ Nuevo dispositivo</button>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Dispositivo</th>
+            <th>Tipo</th>
+            <th>Marca / Modelo</th>
+            <th>N° Serie</th>
+            <th>Ubicación</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="deviceTableBody"></tbody>
+      </table>
+      <div id="emptyMessage" class="empty-state" style="display:none;">
+        <div>📭</div>
+        <p>No hay dispositivos que coincidan con la búsqueda</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal dispositivo -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h2 id="modalTitle">Agregar dispositivo</h2>
+      <form id="deviceForm">
+        <input type="hidden" id="deviceId" value="">
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label for="name">Nombre del dispositivo *</label>
+            <input type="text" id="name" required placeholder="Ej: Laptop Dell XPS 15">
+          </div>
+          <div class="form-group">
+            <label for="type">Tipo *</label>
+            <select id="type" required>
+              <option value="">Seleccionar...</option>
+              <option value="Portátil">Portátil</option>
+              <option value="Escritorio">Escritorio</option>
+              <option value="Monitor">Monitor</option>
+              <option value="Impresora">Impresora</option>
+              <option value="Servidor">Servidor</option>
+              <option value="Tablet">Tablet</option>
+              <option value="Smartphone">Smartphone</option>
+              <option value="Router">Router</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="status">Estado *</label>
+            <select id="status" required>
+              <option value="Activo">Activo</option>
+              <option value="Mantenimiento">Mantenimiento</option>
+              <option value="Baja">Baja</option>
+              <option value="Disponible">Disponible</option>
+              <option value="Asignado">Asignado</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="brand">Marca</label>
+            <input type="text" id="brand" placeholder="Ej: Dell, HP, Lenovo">
+          </div>
+          <div class="form-group">
+            <label for="model">Modelo</label>
+            <input type="text" id="model" placeholder="Ej: XPS 15 9520">
+          </div>
+          <div class="form-group">
+            <label for="serial">N° de serie</label>
+            <input type="text" id="serial" placeholder="Ej: SN-12345678">
+          </div>
+          <div class="form-group">
+            <label for="location">Ubicación / Usuario</label>
+            <input type="text" id="location" placeholder="Ej: Oficina 201 - Ana Gómez">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="closeModalBtn">Cancelar</button>
+          <button type="submit" class="btn-primary" style="box-shadow:none;">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal cambiar contraseña -->
+  <div class="modal-overlay" id="passwordModalOverlay">
+    <div class="modal" style="max-width: 450px;">
+      <h2>Cambiar contraseña</h2>
+      <form id="passwordForm">
+        <div class="form-grid" style="grid-template-columns: 1fr;">
+          <div class="form-group">
+            <label for="passActual">Contraseña actual *</label>
+            <input type="password" id="passActual" required>
+          </div>
+          <div class="form-group">
+            <label for="passNueva">Nueva contraseña *</label>
+            <input type="password" id="passNueva" required minlength="6">
+          </div>
+          <div class="form-group">
+            <label for="passConfirmar">Confirmar nueva contraseña *</label>
+            <input type="password" id="passConfirmar" required minlength="6">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="closePasswordModalBtn">Cancelar</button>
+          <button type="submit" class="btn-primary" style="box-shadow:none;">Cambiar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal gestión de usuarios (solo admin) -->
+  <div class="modal-overlay" id="usersModalOverlay">
+    <div class="modal" style="max-width: 720px;">
+      <h2>Gestión de usuarios</h2>
+
+      <div id="usersList" class="users-list"></div>
+
+      <h3 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 1.15rem; color:#1e2b3c;">Crear nuevo usuario</h3>
+      <form id="userForm">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="newUserUsuario">Usuario *</label>
+            <input type="text" id="newUserUsuario" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label for="newUserNombre">Nombre completo *</label>
+            <input type="text" id="newUserNombre" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label for="newUserPassword">Contraseña *</label>
+            <input type="password" id="newUserPassword" required minlength="6" autocomplete="new-password">
+          </div>
+          <div class="form-group">
+            <label for="newUserRol">Rol *</label>
+            <select id="newUserRol" required>
+              <option value="tecnico">Técnico</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="closeUsersModalBtn">Cerrar</button>
+          <button type="submit" class="btn-primary" style="box-shadow:none;">Crear usuario</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">Guardado</div>
+  <script src="app.js"></script>
+</body>
+</html>
