@@ -221,7 +221,7 @@ function renderTable() {
         <td style="font-weight: 500;">${escapeHtml(d.fabricante || '—')} ${escapeHtml(d.modelo || '')}</td>
         <td>${escapeHtml(d.tipo || '—')}</td>
         <td>${escapeHtml(d.fabricante || '—')} / ${escapeHtml(d.modelo || '—')}</td>
-        <td>${escapeHtml(d.departamento || '—')}</td> <!-- UBICACIÓN -->
+            <td>${escapeHtml(d.departamento || '—')}</td> <!-- UBICACIÓN -->
         <td>${escapeHtml(d.usuario_responsable || '—')}</td> <!-- DUEÑO -->
         <td>${getBadgeEstado(d.estado)}</td>
         <td>
