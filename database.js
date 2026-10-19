@@ -23,7 +23,7 @@ pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: DB_NAME,
   port: process.env.DB_PORT || 4000,
-  // Forzamos TLS y desactivamos la verificación estricta del certificado
+  // Forzamos explícitamente la conexión TLS
   ssl: {
     minVersion: 'TLSv1.2',
     rejectUnauthorized: false
