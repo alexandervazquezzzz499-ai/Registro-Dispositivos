@@ -23,7 +23,7 @@ async function initDB() {
     password: process.env.DB_PASSWORD,
     database: DB_NAME,
     port: process.env.DB_PORT || 3306,
-    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: true } : false, // <-- AGREGA ESTO
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
