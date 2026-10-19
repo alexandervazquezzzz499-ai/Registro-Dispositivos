@@ -3,6 +3,7 @@ let currentUser = null;
 let importRows = [];
 let currentMaintenanceDeviceId = null;
 
+// DOM Elements
 const tableBody = document.getElementById('deviceTableBody');
 const emptyMessage = document.getElementById('emptyMessage');
 const totalCountSpan = document.getElementById('totalCount');
@@ -43,6 +44,7 @@ const confirmMessage = document.getElementById('confirmMessage');
 const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
 const acceptConfirmBtn = document.getElementById('acceptConfirmBtn');
 
+// Form Fields
 const fieldId = document.getElementById('deviceId');
 const fieldDepartamento = document.getElementById('departamento');
 const fieldUsuario = document.getElementById('usuario_responsable');
@@ -50,6 +52,7 @@ const fieldFabricante = document.getElementById('fabricante');
 const fieldModelo = document.getElementById('modelo');
 const fieldTipo = document.getElementById('tipo');
 const fieldEstado = document.getElementById('estado');
+const fieldSerie = document.getElementById('serie'); // Agregado
 const fieldProcesador = document.getElementById('procesador');
 const fieldNucleos = document.getElementById('nucleos');
 const fieldFrecuencia = document.getElementById('frecuencia');
@@ -90,10 +93,15 @@ function normalizar(texto) {
 function mapearColumna(col) {
   const n = normalizar(col);
   const mapa = {
-    'departamento': 'departamento', 'usuario': 'usuario_responsable', 'responsable': 'usuario_responsable',
-    'fabricante': 'fabricante', 'marca': 'fabricante', 'modelo': 'modelo', 'tipo': 'tipo', 'estado': 'estado',
+    'departamento': 'departamento', 'depto': 'departamento', 'area': 'departamento',
+    'usuario': 'usuario_responsable', 'responsable': 'usuario_responsable',
+    'fabricante': 'fabricante', 'marca': 'fabricante', 
+    'modelo': 'modelo', 
+    'tipo': 'tipo', 'estado': 'estado',
+    'serie': 'serie', 'serial': 'serie', 'n/serie': 'serie', 'n serie': 'serie',
     'procesador': 'procesador', 'cpu': 'procesador',
-    'nucleos/cpus': 'nucleos', 'nucleos': 'nucleos', 'frecuencia cpu': 'frecuencia', 'frecuencia': 'frecuencia',
+    'nucleos/cpus': 'nucleos', 'nucleos': 'nucleos', 
+    'frecuencia cpu': 'frecuencia', 'frecuencia': 'frecuencia',
     'ram capacidad total': 'ram_total', 'ram total': 'ram_total', 'ram': 'ram_total',
     'detalles ram / ranuras / velocidad': 'detalles_ram', 'detalles ram': 'detalles_ram', 'ram detalles': 'detalles_ram'
   };
@@ -120,9 +128,7 @@ function mostrarConfirmacion(mensaje, callbackAceptar, esEliminar = false) {
   });
 }
 
-function cerrarConfirmacion() {
-  confirmModalOverlay.classList.remove('active');
-}
+function cerrarConfirmacion() { confirmModalOverlay.classList.remove('active'); }
 
 async function abrirModalUsuarios() {
   usersModalOverlay.classList.add('active');
@@ -132,20 +138,10 @@ async function abrirModalUsuarios() {
     let html = '';
     users.forEach(u => {
       const fecha = new Date(u.creado_en).toLocaleDateString();
-      html += `
-        <tr>
-          <td>${u.id}</td>
-          <td style="font-weight:600;">${escapeHtml(u.usuario)}</td>
-          <td>${escapeHtml(u.nombre)}</td>
-          <td>${u.rol === 'admin' ? '<span class="badge badge-disponible">Admin</span>' : '<span class="badge badge-activo">Usuario</span>'}</td>
-          <td style="color:var(--text-muted);">${fecha}</td>
-        </tr>
-      `;
+      html += `<tr><td>${u.id}</td><td style="font-weight:600;">${escapeHtml(u.usuario)}</td><td>${escapeHtml(u.nombre)}</td><td>${u.rol === 'admin' ? '<span class="badge badge-disponible">Admin</span>' : '<span class="badge badge-activo">Usuario</span>'}</td><td style="color:var(--text-muted);">${fecha}</td></tr>`;
     });
     usersTableBody.innerHTML = html;
-  } catch (err) {
-    usersTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">Error al cargar usuarios</td></tr>`;
-  }
+  } catch (err) { usersTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">Error al cargar usuarios</td></tr>`; }
 }
 
 async function handleNewUserSubmit(e) {
@@ -161,9 +157,7 @@ async function handleNewUserSubmit(e) {
     showToast('Usuario creado exitosamente');
     newUserForm.reset();
     abrirModalUsuarios();
-  } catch (err) {
-    showToast(err.message, true);
-  }
+  } catch (err) { showToast(err.message, true); }
 }
 
 async function cargarDispositivos() {
@@ -181,7 +175,8 @@ function getFilteredDevices() {
       const match = (d.departamento && d.departamento.toLowerCase().includes(searchTerm)) ||
                     (d.usuario_responsable && d.usuario_responsable.toLowerCase().includes(searchTerm)) ||
                     (d.modelo && d.modelo.toLowerCase().includes(searchTerm)) ||
-                    (d.procesador && d.procesador.toLowerCase().includes(searchTerm));
+                    (d.procesador && d.procesador.toLowerCase().includes(searchTerm)) ||
+                    (d.serie && d.serie.toLowerCase().includes(searchTerm));
       if (!match) return false;
     }
     if (typeFilter && d.tipo !== typeFilter) return false;
@@ -208,7 +203,7 @@ function renderTable() {
         <td>${escapeHtml(d.tipo || '—')}</td>
         <td>${escapeHtml(d.fabricante || '—')} / ${escapeHtml(d.modelo || '—')}</td>
         <td>${escapeHtml(d.departamento || '—')} - ${escapeHtml(d.usuario_responsable || '—')}</td>
-        <td>—</td> <!-- Columna DUEÑO (vacía como en tu captura) -->
+        <td>—</td> <!-- DUEÑO -->
         <td>${getBadgeEstado(d.estado)}</td>
         <td>
           <div class="actions">
@@ -234,9 +229,7 @@ function renderTable() {
     const id = e.currentTarget.dataset.id;
     const d = devices.find(x => String(x.id) === String(id));
     if (!d) return;
-    mostrarConfirmacion(`¿Estás seguro de eliminar el equipo <b>${escapeHtml(d.modelo)}</b> de ${escapeHtml(d.departamento)}?`, () => {
-      eliminarDispositivo(id);
-    }, true);
+    mostrarConfirmacion(`¿Estás seguro de eliminar el equipo <b>${escapeHtml(d.modelo)}</b> de ${escapeHtml(d.departamento)}?`, () => { eliminarDispositivo(id); }, true);
   }));
 }
 
@@ -271,7 +264,6 @@ async function openMaintenanceModal(id) {
     }
   } catch (err) {
     maintenanceHistoryBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--danger);">Error al cargar historial</td></tr>`;
-    showToast("Error: " + err.message, true);
   }
 }
 
@@ -313,6 +305,7 @@ function openEditModal(id) {
   fieldModelo.value = d.modelo || '';
   fieldTipo.value = d.tipo || 'Desktop';
   fieldEstado.value = d.estado || 'Activo';
+  if (fieldSerie) fieldSerie.value = d.serie || '';
   fieldProcesador.value = d.procesador || '';
   fieldNucleos.value = d.nucleos || '';
   fieldFrecuencia.value = d.frecuencia || '';
@@ -333,6 +326,7 @@ async function handleFormSubmit(e) {
   const payload = {
     departamento: fieldDepartamento.value.trim(), usuario_responsable: fieldUsuario.value.trim(),
     fabricante: fieldFabricante.value.trim(), modelo: fieldModelo.value.trim(), tipo: fieldTipo.value, estado: fieldEstado.value,
+    serie: fieldSerie ? fieldSerie.value.trim() : '',
     procesador: fieldProcesador.value.trim(), nucleos: fieldNucleos.value.trim(), frecuencia: fieldFrecuencia.value.trim(),
     ram_total: fieldRamTotal.value.trim(), detalles_ram: fieldDetallesRam.value.trim()
   };
@@ -350,12 +344,179 @@ async function handleFormSubmit(e) {
   } catch (err) { showToast(err.message, true); }
 }
 
-function exportarExcel() { /* ... (Igual que en el mensaje anterior) ... */ }
-function parsearCSV(texto) { /* ... */ }
-function procesarFilas(filasCrudas) { /* ... */ }
-function mostrarPrevisualizacion(resultados) { /* ... */ }
-async function manejarArchivoSeleccionado(file) { /* ... */ }
-async function confirmarImportacion() { /* ... */ }
+function exportarExcel() {
+  const filtered = getFilteredDevices();
+  if (filtered.length === 0) { showToast('No hay equipos para exportar', true); return; }
+  const fecha = new Date();
+  const headers = ['Estado', 'Departamento', 'Usuario', 'Fabricante', 'Modelo', 'Tipo', 'Serie', 'Procesador', 'Núcleos/CPUs', 'Frecuencia CPU', 'RAM Capacidad Total', 'Detalles RAM / Ranuras / Velocidad'];
+  let filasHtml = '';
+  filtered.forEach((d, i) => {
+    const zebra = i % 2 === 0 ? '#ffffff' : '#f7f9fd';
+    filasHtml += `
+      <tr style="background:${zebra};">
+        <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.estado || 'Activo')}</td>
+        <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.departamento)}</td>
+        <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.usuario_responsable)}</td>
+        <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.fabricante)}</td>
+        <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.modelo)}</td>
+        <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.tipo)}</td>
+        <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.serie)}</td>
+        <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.procesador)}</td>
+        <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.nucleos)}</td>
+        <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.frecuencia)}</td>
+        <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.ram_total)}</td>
+        <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.detalles_ram)}</td>
+      </tr>
+    `;
+  });
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table { border-collapse: collapse; }</style></head><body><table><tr><td colspan="12" style="background:#1f4e78; color:white; font-size:16px; font-weight:bold; padding:12px; text-align:center; border:1px solid #143454;">INVENTARIO GENERAL DE EQUIPOS DE CÓMPUTO Y HARDWARE</td></tr><tr><td colspan="12" style="background:#ddebf7; color:#1e2b3c; font-size:10px; padding:6px; text-align:center; border:1px solid #b4c6e7;">Reporte generado el ${fecha.toLocaleDateString()} · Total equipos: ${filtered.length}</td></tr><tr><td colspan="12" style="height:8px;"></td></tr><tr>${headers.map(h => `<th style="background:#1f4e78; color:white; font-size:11px; padding:8px; border:1px solid #143454; text-transform:uppercase;">${h}</th>`).join('')}</tr>${filasHtml}<tr><td colspan="12" style="height:10px;"></td></tr><tr><td colspan="12" style="background:#f2f2f2; color:#666; font-size:10px; padding:6px; text-align:center; border:1px solid #ccc;">TOTAL EQUIPOS REGISTRADOS: ${filtered.length}</td></tr></table></body></html>`;
+  const blob = new Blob(['\ufeff', html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `inventario_${fecha.toISOString().slice(0, 10)}.xls`;
+  link.click(); URL.revokeObjectURL(link.href); showToast(`Exportados ${filtered.length} equipos`);
+}
+
+function parsearCSV(texto) {
+  const sep = (texto.split(/\r?\n/)[0].match(/;/g) || []).length > 0 ? ';' : ',';
+  const lineas = texto.split(/\r?\n/).filter(l => l.trim() !== '');
+  if (lineas.length < 2) return [];
+  function parseLinea(l) {
+    const res = []; let act = ''; let com = false;
+    for (let i = 0; i < l.length; i++) {
+      if (l[i] === '"') { if (com && l[i+1] === '"') { act += '"'; i++; } else com = !com; }
+      else if (l[i] === sep && !com) { res.push(act); act = ''; }
+      else { act += l[i]; }
+    }
+    res.push(act);
+    return res;
+  }
+  const cabeceras = parseLinea(lineas[0]);
+  return lineas.slice(1).map(l => {
+    const celdas = parseLinea(l);
+    const obj = {};
+    cabeceras.forEach((c, i) => obj[c] = celdas[i] || '');
+    return obj;
+  });
+}
+
+function procesarFilas(filasCrudas) {
+  return filasCrudas.map((fila, idx) => {
+    const datos = {};
+    Object.keys(fila).forEach(col => {
+      const clave = mapearColumna(col);
+      if (clave) datos[clave] = String(fila[col] ?? '').trim();
+    });
+    let tipoExcel = String(datos.tipo || '').trim();
+    let tipoCanon = TIPOS_VALIDOS.find(t => normalizar(t) === normalizar(tipoExcel));
+    if (!tipoCanon) tipoCanon = 'Otro';
+    const dispositivo = {
+      departamento: datos.departamento || '', usuario_responsable: datos.usuario_responsable || '',
+      fabricante: datos.fabricante || '', modelo: datos.modelo || '', tipo: tipoCanon,
+      estado: datos.estado || 'Activo', serie: datos.serie || '',
+      procesador: datos.procesador || '', nucleos: datos.nucleos || '',
+      frecuencia: datos.frecuencia || '', ram_total: datos.ram_total || '', detalles_ram: datos.detalles_ram || ''
+    };
+    const errores = [];
+    if (!dispositivo.departamento) errores.push('Falta Departamento');
+    return { numero: idx + 1, dispositivo, valido: errores.length === 0, errores };
+  });
+}
+
+function mostrarPrevisualizacion(resultados) {
+  const validos = resultados.filter(r => r.valido).length;
+  const invalidos = resultados.length - validos;
+  importSummary.innerHTML = `Se detectaron <b>${resultados.length}</b> fila(s): <span style="color:var(--success); font-weight:600;">${validos} válida(s)</span>${invalidos > 0 ? ` · <span style="color:var(--danger); font-weight:600;">${invalidos} con errores</span>` : ''}.`;
+  if (resultados.length === 0) {
+    importPreviewBody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:2rem; color:var(--text-muted);">No se encontraron filas.</td></tr>`;
+    confirmImportBtn.disabled = true;
+    return;
+  }
+  let html = '';
+  resultados.forEach(r => {
+    const d = r.dispositivo;
+    html += `<tr style="${r.valido ? '' : 'background:#fff5f5;'}"><td>${r.numero}</td><td>${escapeHtml(d.departamento)}</td><td>${escapeHtml(d.usuario_responsable)}</td><td>${escapeHtml(d.fabricante)}</td><td>${escapeHtml(d.modelo)}</td><td>${escapeHtml(d.tipo)}</td><td>${escapeHtml(d.estado)}</td><td>${escapeHtml(d.procesador)}</td><td>${escapeHtml(d.nucleos)}</td><td>${escapeHtml(d.frecuencia)}</td><td>${escapeHtml(d.ram_total)}</td><td>${r.valido ? '<span class="import-ok">✔ OK</span>' : `<span class="import-error" title="${escapeHtml(r.errores.join(', '))}">✖ Error</span>`}</td></tr>`;
+  });
+  importPreviewBody.innerHTML = html;
+  confirmImportBtn.disabled = validos === 0;
+}
+
+async function manejarArchivoSeleccionado(file) {
+  if (!file) return;
+  const nombre = file.name.toLowerCase();
+  try {
+    let filasCrudas = [];
+    if (nombre.endsWith('.csv')) {
+      const texto = await file.text();
+      filasCrudas = parsearCSV(texto);
+    } else if (nombre.endsWith('.xlsx') || nombre.endsWith('.xls')) {
+      if (typeof XLSX === 'undefined') { showToast('Error: No se pudo cargar la librería para leer Excel.', true); return; }
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: 'array' });
+      const hoja = workbook.Sheets[workbook.SheetNames[0]];
+      const matrizCruda = XLSX.utils.sheet_to_json(hoja, { header: 1, defval: '' });
+      
+      let indiceFilaEncabezado = -1;
+      for (let i = 0; i < matrizCruda.length; i++) {
+        const fila = matrizCruda[i].map(c => normalizar(String(c)));
+        // Busca filas que contengan palabras clave de encabezados
+        if (fila.includes('departamento') || fila.includes('modelo') || fila.includes('fabricante')) {
+          indiceFilaEncabezado = i;
+          break;
+        }
+      }
+      
+      if (indiceFilaEncabezado === -1) { showToast('No se encontraron los encabezados en el archivo.', true); return; }
+      
+      const encabezados = matrizCruda[indiceFilaEncabezado];
+      const filasDatos = matrizCruda.slice(indiceFilaEncabezado + 1);
+      
+      filasCrudas = filasDatos.map(filaArray => {
+        const obj = {};
+        encabezados.forEach((encabezado, index) => {
+          if (encabezado && String(encabezado).trim() !== '') {
+            obj[String(encabezado).trim()] = filaArray[index] !== undefined ? filaArray[index] : '';
+          }
+        });
+        return obj;
+      });
+    } else {
+      showToast('Formato no soportado. Usa .xls, .xlsx o .csv', true); return;
+    }
+    
+    filasCrudas = filasCrudas.filter(fila => Object.values(fila).some(v => String(v).trim() !== ''));
+    if (filasCrudas.length === 0) { showToast('El archivo está vacío.', true); return; }
+    
+    importRows = procesarFilas(filasCrudas);
+    mostrarPrevisualizacion(importRows);
+    importModalOverlay.classList.add('active');
+  } catch (err) {
+    showToast('Error al leer archivo: ' + err.message, true);
+  } finally {
+    importFileInput.value = '';
+  }
+}
+
+async function confirmarImportacion() {
+  const validas = importRows.filter(r => r.valido);
+  if (validas.length === 0) return;
+  confirmImportBtn.disabled = true;
+  confirmImportBtn.textContent = `Importando...`;
+  let ok = 0, fail = 0, primerErrorMsg = '';
+  for (let i = 0; i < validas.length; i++) {
+    try {
+      await apiFetch('/api/dispositivos', { method: 'POST', body: JSON.stringify(validas[i].dispositivo) });
+      ok++;
+    } catch (err) { fail++; if (!primerErrorMsg) primerErrorMsg = err.message; }
+    confirmImportBtn.textContent = `Importando ${i + 1}/${validas.length}...`;
+  }
+  confirmImportBtn.disabled = false;
+  confirmImportBtn.textContent = 'Importar';
+  importModalOverlay.classList.remove('active');
+  importFileInput.value = '';
+  importRows = [];
+  if (fail === 0) showToast(`✔ ${ok} equipos importados exitosamente`);
+  else showToast(`Fallaron ${fail} equipos. Motivo: ${primerErrorMsg}`, true);
+  await cargarDispositivos();
+}
 
 function initEvents() {
   openModalBtn.addEventListener('click', openNewModal);
@@ -429,10 +590,7 @@ function initEvents() {
     document.getElementById('userName').textContent = currentUser.nombre;
     document.getElementById('userRole').textContent = currentUser.rol;
     document.getElementById('userAvatar').textContent = currentUser.nombre.charAt(0).toUpperCase();
-    
-    if (currentUser.rol === 'admin') {
-      manageUsersBtn.style.display = 'flex';
-    }
+    if (currentUser.rol === 'admin') { manageUsersBtn.style.display = 'flex'; }
   } catch { window.location.href = '/login.html'; }
   initEvents();
   await cargarDispositivos();
