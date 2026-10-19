@@ -17,17 +17,21 @@ async function initDB() {
   await conn.end();
 
   // 2. Crear pool de conexiones
-  pool = mysql.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: DB_NAME,
-    port: process.env.DB_PORT || 3306,
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-  });
+pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: DB_NAME,
+  port: process.env.DB_PORT || 4000,
+  // Forzamos TLS y desactivamos la verificación estricta del certificado
+  ssl: {
+    minVersion: 'TLSv1.2',
+    rejectUnauthorized: false
+  },
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
   // 3. Crear tablas
   await pool.query(`
     CREATE TABLE IF NOT EXISTS usuarios (
