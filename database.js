@@ -7,36 +7,36 @@ const DB_NAME = process.env.DB_NAME || 'dispositivos_db';
 let pool = null;
 
 async function initDB() {
-  // 1. Crear la base de datos si no existe (conexión sin base de datos)
-const conn = await mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT || 4000,
-  ssl: {
-    minVersion: 'TLSv1.2',
-    rejectUnauthorized: true
-  }
+  // 1. Crear la base de datos si no existe
+  const conn = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    port: process.env.DB_PORT || 4000, // <-- IMPORTANTE
+    ssl: {
+      minVersion: 'TLSv1.2',
+      rejectUnauthorized: true
+    }
   });
   await conn.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
   await conn.end();
 
   // 2. Crear pool de conexiones
-pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: DB_NAME,
-  port: process.env.DB_PORT || 4000,
-  // Forzamos la conexión segura con los certificados por defecto de Node.js
-  ssl: {
-    minVersion: 'TLSv1.2',
-    rejectUnauthorized: true
-  },
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
+  pool = mysql.createPool({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: DB_NAME,
+    port: process.env.DB_PORT || 4000, // <-- IMPORTANTE
+    ssl: {
+      minVersion: 'TLSv1.2',
+      rejectUnauthorized: true
+    },
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+  });
+
   // 3. Crear tablas
   await pool.query(`
     CREATE TABLE IF NOT EXISTS usuarios (
@@ -74,8 +74,6 @@ pool = mysql.createPool({
       'INSERT INTO usuarios (usuario, password_hash, nombre, rol) VALUES (?, ?, ?, ?)',
       ['admin', hash, 'Administrador', 'admin']
     );
-    console.log('✅ Usuario admin creado → usuario: admin | contraseña: admin123');
-    console.log('⚠️  Cambia la contraseña después del primer login.');
   }
 
   return pool;
