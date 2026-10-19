@@ -118,7 +118,7 @@ app.post('/api/dispositivos', requireAuth, async (req, res) => {
     const [result] = await pool.execute(`
       INSERT INTO dispositivos (departamento, usuario_responsable, fabricante, modelo, tipo, estado, procesador, nucleos, frecuencia, ram_total, detalles_ram, creado_por)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [departamento, usuario_responsable || '', fabricante || '', modelo || '', tipo, estado || 'Activo', procesador || '', nucleos || '', frecuencia || '', ram_total || '', detalles_ram || '', req.session.userId]);
+    `, [departamento, usuario_responsable || '', fabricante || '', modelo || '', tipo, estado || 'Activo', procesador || '', nucleos || '', frecuencia || '', ram_total || '', detalles_ram || '', req.session.userId || null]);
     res.json({ ok: true, id: result.insertId });
   } catch (err) { res.status(500).json({ error: 'Error BD: ' + err.message }); }
 });

@@ -2,9 +2,8 @@ let devices = [];
 let currentUser = null;
 let importRows = [];
 let currentMaintenanceDeviceId = null;
-let pendingDeleteId = null; 
-let pendingLogout = false;  
 
+// DOM Elements
 const tableBody = document.getElementById('deviceTableBody');
 const emptyMessage = document.getElementById('emptyMessage');
 const totalCountSpan = document.getElementById('totalCount');
@@ -36,17 +35,20 @@ const closePasswordModalBtn = document.getElementById('closePasswordModalBtn');
 const changePasswordBtn = document.getElementById('changePasswordBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 
+// User Management
 const manageUsersBtn = document.getElementById('manageUsersBtn');
 const usersModalOverlay = document.getElementById('usersModalOverlay');
 const closeUsersModalBtn = document.getElementById('closeUsersModalBtn');
 const newUserForm = document.getElementById('newUserForm');
 const usersTableBody = document.getElementById('usersTableBody');
 
+// Confirmation Modal
 const confirmModalOverlay = document.getElementById('confirmModalOverlay');
 const confirmMessage = document.getElementById('confirmMessage');
 const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
 const acceptConfirmBtn = document.getElementById('acceptConfirmBtn');
 
+// Form Fields
 const fieldId = document.getElementById('deviceId');
 const fieldDepartamento = document.getElementById('departamento');
 const fieldUsuario = document.getElementById('usuario_responsable');

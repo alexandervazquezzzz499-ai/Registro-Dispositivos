@@ -1,6 +1,6 @@
 {
   "name": "registro-dispositivos",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Sistema de registro de dispositivos con login y MySQL",
   "main": "server.js",
   "scripts": {
