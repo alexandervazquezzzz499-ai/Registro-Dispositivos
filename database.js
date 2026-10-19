@@ -7,27 +7,28 @@ const DB_NAME = process.env.DB_NAME || 'dispositivos_db';
 let pool = null;
 
 async function initDB() {
-  // 1. Crear la base de datos si no existe
+  // 1. Crear la base de datos si no existe (Conexión individual segura)
   const conn = await mysql.createConnection({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    port: process.env.DB_PORT || 4000, // <-- IMPORTANTE
+    port: process.env.DB_PORT || 4000,
     ssl: {
       minVersion: 'TLSv1.2',
       rejectUnauthorized: true
     }
   });
+  
   await conn.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
   await conn.end();
 
-  // 2. Crear pool de conexiones
+  // 2. Crear pool de conexiones (Para el resto de la app)
   pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: DB_NAME,
-    port: process.env.DB_PORT || 4000, // <-- IMPORTANTE
+    port: process.env.DB_PORT || 4000,
     ssl: {
       minVersion: 'TLSv1.2',
       rejectUnauthorized: true
