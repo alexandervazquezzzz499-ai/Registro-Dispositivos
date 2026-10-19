@@ -215,14 +215,23 @@ function renderTable() {
 
   let html = '';
   filtered.forEach(d => {
-    // AQUI SE CORRIGIO LA UBICACION Y EL DUEÑO
+    // 🔥 MAGIA: Si el dueño está vacío y el departamento tiene un guion, lo separamos
+    let deptoMostrar = d.departamento || '—';
+    let duenoMostrar = d.usuario_responsable || '—';
+    
+    if (duenoMostrar === '—' && deptoMostrar.includes(' - ')) {
+      const partes = deptoMostrar.split(' - ');
+      deptoMostrar = partes[0].trim();
+      duenoMostrar = partes.slice(1).join(' - ').trim();
+    }
+
     html += `
       <tr data-id="${d.id}">
         <td style="font-weight: 500;">${escapeHtml(d.fabricante || '—')} ${escapeHtml(d.modelo || '')}</td>
         <td>${escapeHtml(d.tipo || '—')}</td>
         <td>${escapeHtml(d.fabricante || '—')} / ${escapeHtml(d.modelo || '—')}</td>
-            <td>${escapeHtml(d.departamento || '—')}</td> <!-- UBICACIÓN -->
-        <td>${escapeHtml(d.usuario_responsable || '—')}</td> <!-- DUEÑO -->
+        <td>${escapeHtml(deptoMostrar)}</td> <!-- UBICACIÓN ARREGLADA -->
+        <td>${escapeHtml(duenoMostrar)}</td> <!-- DUEÑO ARREGLADO -->
         <td>${getBadgeEstado(d.estado)}</td>
         <td>
           <div class="actions">
