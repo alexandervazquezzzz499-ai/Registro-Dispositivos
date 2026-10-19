@@ -34,11 +34,15 @@ const passwordForm = document.getElementById('passwordForm');
 const closePasswordModalBtn = document.getElementById('closePasswordModalBtn');
 const changePasswordBtn = document.getElementById('changePasswordBtn');
 const logoutBtn = document.getElementById('logoutBtn');
+
+// User Management
 const manageUsersBtn = document.getElementById('manageUsersBtn');
 const usersModalOverlay = document.getElementById('usersModalOverlay');
 const closeUsersModalBtn = document.getElementById('closeUsersModalBtn');
 const newUserForm = document.getElementById('newUserForm');
 const usersTableBody = document.getElementById('usersTableBody');
+
+// Confirmation Modal
 const confirmModalOverlay = document.getElementById('confirmModalOverlay');
 const confirmMessage = document.getElementById('confirmMessage');
 const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
@@ -52,7 +56,7 @@ const fieldFabricante = document.getElementById('fabricante');
 const fieldModelo = document.getElementById('modelo');
 const fieldTipo = document.getElementById('tipo');
 const fieldEstado = document.getElementById('estado');
-const fieldSerie = document.getElementById('serie'); // Agregado
+const fieldSerie = document.getElementById('serie'); 
 const fieldProcesador = document.getElementById('procesador');
 const fieldNucleos = document.getElementById('nucleos');
 const fieldFrecuencia = document.getElementById('frecuencia');
@@ -116,16 +120,24 @@ async function apiFetch(url, options = {}) {
   return data;
 }
 
+// ✅ FUNCIÓN REPARADA PARA EL MODAL DE CONFIRMACIÓN
 function mostrarConfirmacion(mensaje, callbackAceptar, esEliminar = false) {
   confirmMessage.innerHTML = mensaje;
-  acceptConfirmBtn.style.background = esEliminar ? 'var(--danger)' : 'var(--primary)';
-  confirmModalOverlay.classList.add('active');
-  const nuevoAceptar = acceptConfirmBtn.cloneNode(true);
-  acceptConfirmBtn.parentNode.replaceChild(nuevoAceptar, acceptConfirmBtn);
-  nuevoAceptar.addEventListener('click', () => {
+  
+  // Seleccionamos el botón directamente del DOM
+  const btnAceptar = document.getElementById('acceptConfirmBtn');
+  
+  // Forzamos que tenga el texto y el color correcto
+  btnAceptar.textContent = 'Aceptar';
+  btnAceptar.style.backgroundColor = esEliminar ? '#dc2626' : '#2a6df4'; // Rojo para eliminar, azul para otros
+  
+  // Asignamos el evento (esto sobrescribe cualquier evento anterior sin romper nada)
+  btnAceptar.onclick = () => {
     confirmModalOverlay.classList.remove('active');
     callbackAceptar();
-  });
+  };
+  
+  confirmModalOverlay.classList.add('active');
 }
 
 function cerrarConfirmacion() { confirmModalOverlay.classList.remove('active'); }
@@ -457,7 +469,6 @@ async function manejarArchivoSeleccionado(file) {
       let indiceFilaEncabezado = -1;
       for (let i = 0; i < matrizCruda.length; i++) {
         const fila = matrizCruda[i].map(c => normalizar(String(c)));
-        // Busca filas que contengan palabras clave de encabezados
         if (fila.includes('departamento') || fila.includes('modelo') || fila.includes('fabricante')) {
           indiceFilaEncabezado = i;
           break;
