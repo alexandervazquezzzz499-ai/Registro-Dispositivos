@@ -158,7 +158,24 @@ app.post('/api/dispositivos/:id/mantenimientos', requireAuth, async (req, res) =
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: 'Error BD: ' + err.message }); }
 });
+// NUEVO: Eliminar usuario (Solo Admin)
+app.delete('/api/usuarios/:id', requireAuth, async (req, res) => {
+  if (req.session.rol !== 'admin') return res.status(403).json({ error: 'Solo administradores' });
+  const { id } = req.params;
+  
+  // Evitar que el admin se elimine a sí mismo
+  if (Number(id) === req.session.userId) {
+    return res.status(400).json({ error: 'No puedes eliminarte a ti mismo' });
+  }
 
+  try {
+    const pool = getPool();
+    await pool.execute('DELETE FROM usuarios WHERE id = ?', [id]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al eliminar usuario' });
+  }
+});
 app.get('/api/todos-mantenimientos', requireAuth, async (req, res) => {
   try {
     const pool = getPool();

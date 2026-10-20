@@ -139,16 +139,54 @@ function cerrarConfirmacion() { confirmModalOverlay.classList.remove('active'); 
 
 async function abrirModalUsuarios() {
   usersModalOverlay.classList.add('active');
-  usersTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Cargando usuarios...</td></tr>`;
+  usersTableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Cargando usuarios...</td></tr>`;
   try {
     const users = await apiFetch('/api/usuarios');
     let html = '';
     users.forEach(u => {
       const fecha = new Date(u.creado_en).toLocaleDateString();
-      html += `<tr><td>${u.id}</td><td style="font-weight:600;">${escapeHtml(u.usuario)}</td><td>${escapeHtml(u.nombre)}</td><td>${u.rol === 'admin' ? '<span class="badge badge-disponible">Admin</span>' : '<span class="badge badge-activo">Usuario</span>'}</td><td style="color:var(--text-muted);">${fecha}</td></tr>`;
+      
+      // Si es tu propio usuario, mostramos "Tú" en vez del botón de borrar
+      const btnEliminar = String(u.id) === String(currentUser.id) 
+        ? '<span style="color:#94a3b8; font-size:0.8rem;">Tú</span>' 
+        : `<button class="btn-icon delete-user" data-id="${u.id}" data-nombre="${escapeHtml(u.nombre)}" title="Eliminar">🗑️</button>`;
+
+      html += `
+        <tr>
+          <td>${u.id}</td>
+          <td style="font-weight:600;">${escapeHtml(u.usuario)}</td>
+          <td>${escapeHtml(u.nombre)}</td>
+          <td>${u.rol === 'admin' ? '<span class="badge badge-disponible">Admin</span>' : '<span class="badge badge-activo">Usuario</span>'}</td>
+          <td style="color:var(--text-muted);">${fecha}</td>
+          <td>${btnEliminar}</td>
+        </tr>
+      `;
     });
     usersTableBody.innerHTML = html;
-  } catch (err) { usersTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">Error al cargar usuarios</td></tr>`; }
+
+    // Agregar evento a los botones de eliminar
+    document.querySelectorAll('.delete-user').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.dataset.id;
+        const nombre = e.currentTarget.dataset.nombre;
+        mostrarConfirmacion(`¿Estás seguro de eliminar al usuario <b>${nombre}</b>?<br><span style="font-size:0.8rem; color:#dc2626;">Esta acción no se puede deshacer.</span>`, () => {
+          eliminarUsuario(id);
+        }, true);
+      });
+    });
+
+  } catch (err) { usersTableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">Error al cargar usuarios</td></tr>`; }
+}
+
+// NUEVA FUNCIÓN para eliminar el usuario
+async function eliminarUsuario(id) {
+  try {
+    await apiFetch(`/api/usuarios/${id}`, { method: 'DELETE' });
+    showToast('Usuario eliminado correctamente');
+    abrirModalUsuarios(); // Recargar la tabla
+  } catch (err) {
+    showToast(err.message, true);
+  }
 }
 
 async function handleNewUserSubmit(e) {
