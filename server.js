@@ -70,6 +70,7 @@ app.post('/api/cambiar-password', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Error al cambiar la contraseña' }); }
 });
 
+// USUARIOS
 app.get('/api/usuarios', requireAuth, async (req, res) => {
   if (req.session.rol !== 'admin') return res.status(403).json({ error: 'Solo administradores' });
   try {
@@ -94,6 +95,18 @@ app.post('/api/usuarios', requireAuth, async (req, res) => {
   }
 });
 
+// BORRAR USUARIO (NUEVO)
+app.delete('/api/usuarios/:id', requireAuth, async (req, res) => {
+  if (req.session.rol !== 'admin') return res.status(403).json({ error: 'Solo administradores' });
+  if (Number(req.params.id) === req.session.userId) return res.status(400).json({ error: 'No puedes eliminarte a ti mismo' });
+  try {
+    const pool = getPool();
+    await pool.execute('DELETE FROM usuarios WHERE id = ?', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: 'Error al eliminar usuario' }); }
+});
+
+// DISPOSITIVOS
 app.get('/api/dispositivos', requireAuth, async (req, res) => {
   try {
     const pool = getPool();
@@ -140,7 +153,7 @@ app.delete('/api/dispositivos/:id', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Error al eliminar' }); }
 });
 
-// MANTENIMIENTOS (CRUD)
+// MANTENIMIENTOS
 app.get('/api/dispositivos/:id/mantenimientos', requireAuth, async (req, res) => {
   try {
     const pool = getPool();
@@ -149,33 +162,28 @@ app.get('/api/dispositivos/:id/mantenimientos', requireAuth, async (req, res) =>
   } catch (err) { res.status(500).json({ error: 'Error al obtener mantenimientos' }); }
 });
 
+// REPORTAR FALLA (Solución opcional)
 app.post('/api/dispositivos/:id/mantenimientos', requireAuth, async (req, res) => {
   const { falla, solucion } = req.body;
-  if (!falla || !solucion) return res.status(400).json({ error: 'Falla y Solución son obligatorios.' });
+  if (!falla) return res.status(400).json({ error: 'La Falla reportada es obligatoria.' });
   try {
     const pool = getPool();
-    await pool.execute(`INSERT INTO mantenimientos (dispositivo_id, falla, solucion, tecnico) VALUES (?, ?, ?, ?)`, [req.params.id, falla, solucion, req.session.nombre]);
+    await pool.execute(`INSERT INTO mantenimientos (dispositivo_id, falla, solucion, tecnico) VALUES (?, ?, ?, ?)`, [req.params.id, falla, solucion || null, req.session.nombre]);
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: 'Error BD: ' + err.message }); }
 });
-// NUEVO: Eliminar usuario (Solo Admin)
-app.delete('/api/usuarios/:id', requireAuth, async (req, res) => {
-  if (req.session.rol !== 'admin') return res.status(403).json({ error: 'Solo administradores' });
-  const { id } = req.params;
-  
-  // Evitar que el admin se elimine a sí mismo
-  if (Number(id) === req.session.userId) {
-    return res.status(400).json({ error: 'No puedes eliminarte a ti mismo' });
-  }
 
+// AGREGAR SOLUCIÓN A UN MANTENIMIENTO PENDIENTE (NUEVO)
+app.put('/api/mantenimientos/:id/solucion', requireAuth, async (req, res) => {
+  const { solucion } = req.body;
+  if (!solucion) return res.status(400).json({ error: 'La solución es obligatoria.' });
   try {
     const pool = getPool();
-    await pool.execute('DELETE FROM usuarios WHERE id = ?', [id]);
+    await pool.execute('UPDATE mantenimientos SET solucion = ? WHERE id = ?', [solucion, req.params.id]);
     res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Error al eliminar usuario' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Error al actualizar la solución' }); }
 });
+
 app.get('/api/todos-mantenimientos', requireAuth, async (req, res) => {
   try {
     const pool = getPool();
@@ -189,7 +197,6 @@ app.get('/api/todos-mantenimientos', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Error al obtener historial general' }); }
 });
 
-// NUEVO: Eliminar un mantenimiento (Solo Admin)
 app.delete('/api/mantenimientos/:id', requireAuth, async (req, res) => {
   if (req.session.rol !== 'admin') return res.status(403).json({ error: 'Solo administradores pueden eliminar historiales' });
   try {

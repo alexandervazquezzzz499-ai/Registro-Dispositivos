@@ -3,7 +3,7 @@ let currentUser = null;
 let importRows = [];
 let currentMaintenanceDeviceId = null;
 
-const PALABRAS_GROSERAS = ['puta', 'mierda', 'pendejo', 'cabron', 'cabrón', 'verga', 'coño', 'joder', 'estupido', 'estúpido', 'idiota', 'culero', 'marico', 'maricón', 'zorra', 'perra', 'gonorrea', 'malparido', 'hijueputa', 'imbecil', 'imbécil'];
+const PALABRAS_GROSERAS = ['mierda', 'pendejo', 'cabron', 'cabrón', 'verga', 'coño', 'joder', 'estupido', 'estúpido', 'idiota', 'culero', 'marico', 'maricón', 'zorra', 'perra', 'gonorrea', 'malparido', 'hijueputa', 'imbecil', 'imbécil'];
 
 const tableBody = document.getElementById('deviceTableBody');
 const emptyMessage = document.getElementById('emptyMessage');
@@ -145,8 +145,6 @@ async function abrirModalUsuarios() {
     let html = '';
     users.forEach(u => {
       const fecha = new Date(u.creado_en).toLocaleDateString();
-      
-      // Si es tu propio usuario, mostramos "Tú" en vez del botón de borrar
       const btnEliminar = String(u.id) === String(currentUser.id) 
         ? '<span style="color:#94a3b8; font-size:0.8rem;">Tú</span>' 
         : `<button class="btn-icon delete-user" data-id="${u.id}" data-nombre="${escapeHtml(u.nombre)}" title="Eliminar">🗑️</button>`;
@@ -164,12 +162,11 @@ async function abrirModalUsuarios() {
     });
     usersTableBody.innerHTML = html;
 
-    // Agregar evento a los botones de eliminar
     document.querySelectorAll('.delete-user').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const id = e.currentTarget.dataset.id;
         const nombre = e.currentTarget.dataset.nombre;
-        mostrarConfirmacion(`¿Estás seguro de eliminar al usuario <b>${nombre}</b>?<br><span style="font-size:0.8rem; color:#dc2626;">Esta acción no se puede deshacer.</span>`, () => {
+        mostrarConfirmacion(`¿Eliminar al usuario <b>${nombre}</b>?`, () => {
           eliminarUsuario(id);
         }, true);
       });
@@ -178,15 +175,12 @@ async function abrirModalUsuarios() {
   } catch (err) { usersTableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">Error al cargar usuarios</td></tr>`; }
 }
 
-// NUEVA FUNCIÓN para eliminar el usuario
 async function eliminarUsuario(id) {
   try {
     await apiFetch(`/api/usuarios/${id}`, { method: 'DELETE' });
     showToast('Usuario eliminado correctamente');
-    abrirModalUsuarios(); // Recargar la tabla
-  } catch (err) {
-    showToast(err.message, true);
-  }
+    abrirModalUsuarios(); 
+  } catch (err) { showToast(err.message, true); }
 }
 
 async function handleNewUserSubmit(e) {
@@ -213,9 +207,7 @@ async function handleNewUserSubmit(e) {
 
 async function cargarDispositivos(silencioso = false) {
   try {
-    if (silencioso && document.querySelector('.modal-overlay.active')) {
-      return; 
-    }
+    if (silencioso && document.querySelector('.modal-overlay.active')) return; 
     devices = await apiFetch('/api/dispositivos');
     renderTable();
   } catch (err) { 
@@ -253,7 +245,6 @@ function renderTable() {
 
   let html = '';
   filtered.forEach(d => {
-    // 🔥 MAGIA: Si el dueño está vacío y el departamento tiene un guion, lo separamos
     let deptoMostrar = d.departamento || '—';
     let duenoMostrar = d.usuario_responsable || '—';
     
@@ -268,8 +259,8 @@ function renderTable() {
         <td style="font-weight: 500;">${escapeHtml(d.fabricante || '—')} ${escapeHtml(d.modelo || '')}</td>
         <td>${escapeHtml(d.tipo || '—')}</td>
         <td>${escapeHtml(d.fabricante || '—')} / ${escapeHtml(d.modelo || '—')}</td>
-        <td>${escapeHtml(deptoMostrar)}</td> <!-- UBICACIÓN ARREGLADA -->
-        <td>${escapeHtml(duenoMostrar)}</td> <!-- DUEÑO ARREGLADO -->
+        <td>${escapeHtml(deptoMostrar)}</td>
+        <td>${escapeHtml(duenoMostrar)}</td>
         <td>${getBadgeEstado(d.estado)}</td>
         <td>
           <div class="actions">
@@ -295,7 +286,7 @@ function renderTable() {
     const id = e.currentTarget.dataset.id;
     const d = devices.find(x => String(x.id) === String(id));
     if (!d) return;
-    mostrarConfirmacion(`¿Estás seguro de eliminar el equipo <b>${escapeHtml(d.modelo)}</b> de ${escapeHtml(d.departamento)}?`, () => { eliminarDispositivo(id); }, true);
+    mostrarConfirmacion(`¿Eliminar el equipo <b>${escapeHtml(d.modelo)}</b>?`, () => { eliminarDispositivo(id); }, true);
   }));
 }
 
@@ -316,6 +307,7 @@ async function openMaintenanceModal(id) {
   maintenanceForm.reset();
   maintenanceHistoryBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Cargando historial...</td></tr>`;
   maintenanceModalOverlay.classList.add('active');
+  
   try {
     const historial = await apiFetch(`/api/dispositivos/${id}/mantenimientos`);
     if (historial.length === 0) {
@@ -324,9 +316,38 @@ async function openMaintenanceModal(id) {
       let html = '';
       historial.forEach(h => {
         const fecha = new Date(h.fecha).toLocaleString('es-ES');
-        html += `<tr><td style="font-size:0.75rem;">${fecha}</td><td style="font-size:0.75rem; font-weight:bold;">${escapeHtml(h.tecnico)}</td><td style="font-size:0.75rem; color:var(--danger);">${escapeHtml(h.falla)}</td><td style="font-size:0.75rem; color:var(--success);">${escapeHtml(h.solucion)}</td></tr>`;
+        
+        // Si no hay solución, mostramos el botón para agregarla
+        const solucionHtml = h.solucion 
+          ? `<span style="font-size:0.75rem; color:var(--success);">${escapeHtml(h.solucion)}</span>`
+          : `<button class="btn-agregar-solucion" data-id="${h.id}" style="background:#e3f0ff; color:#1e5bc6; border:none; padding:4px 8px; border-radius:6px; cursor:pointer; font-size:0.7rem;">Agregar Solución</button>`;
+          
+        html += `
+          <tr>
+            <td style="font-size:0.75rem;">${fecha}</td>
+            <td style="font-size:0.75rem; font-weight:bold;">${escapeHtml(h.tecnico)}</td>
+            <td style="font-size:0.75rem; color:var(--danger);">${escapeHtml(h.falla)}</td>
+            <td>${solucionHtml}</td>
+          </tr>
+        `;
       });
       maintenanceHistoryBody.innerHTML = html;
+
+      // Evento para cuando hacen clic en "Agregar Solución"
+      document.querySelectorAll('.btn-agregar-solucion').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const mantId = e.currentTarget.dataset.id;
+          const solucion = prompt('Escribe la solución aplicada para esta falla:');
+          if (solucion && solucion.trim() !== '') {
+            if (contieneGroserias(solucion)) return showToast('La solución contiene palabras no permitidas.', true);
+            try {
+              await apiFetch(`/api/mantenimientos/${mantId}/solucion`, { method: 'PUT', body: JSON.stringify({ solucion }) });
+              showToast('Solución agregada correctamente');
+              openMaintenanceModal(currentMaintenanceDeviceId);
+            } catch (err) { showToast(err.message, true); }
+          }
+        });
+      });
     }
   } catch (err) {
     maintenanceHistoryBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--danger);">Error al cargar historial</td></tr>`;
@@ -338,7 +359,7 @@ async function handleMaintenanceSubmit(e) {
   const falla = document.getElementById('falla').value.trim();
   const solucion = document.getElementById('solucion').value.trim();
   
-  if (!falla || !solucion) return showToast('Falla y Solución son obligatorios', true);
+  if (!falla) return showToast('La falla reportada es obligatoria', true);
   
   if (contieneGroserias(falla) || contieneGroserias(solucion)) {
     return showToast('El texto contiene palabras no permitidas.', true);
@@ -346,7 +367,7 @@ async function handleMaintenanceSubmit(e) {
 
   try {
     await apiFetch(`/api/dispositivos/${currentMaintenanceDeviceId}/mantenimientos`, { method: 'POST', body: JSON.stringify({ falla, solucion }) });
-    showToast('Mantenimiento guardado correctamente');
+    showToast('Reporte guardado correctamente');
     openMaintenanceModal(currentMaintenanceDeviceId);
     maintenanceForm.reset();
   } catch (err) { showToast("Error al guardar: " + err.message, true); }
@@ -407,9 +428,7 @@ async function handleFormSubmit(e) {
 
   const camposAValidar = [payload.departamento, payload.usuario_responsable, payload.fabricante, payload.modelo, payload.procesador, payload.detalles_ram];
   for (let campo of camposAValidar) {
-    if (contieneGroserias(campo)) {
-      return showToast('El formulario contiene palabras no permitidas.', true);
-    }
+    if (contieneGroserias(campo)) return showToast('El formulario contiene palabras no permitidas.', true);
   }
 
   try {
@@ -669,6 +688,5 @@ function initEvents() {
   
   initEvents();
   await cargarDispositivos();
-
   setInterval(() => { cargarDispositivos(true); }, 10000);
 })();

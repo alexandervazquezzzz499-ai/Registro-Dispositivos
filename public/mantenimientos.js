@@ -22,7 +22,6 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Verificar si es admin
 async function verificarAdmin() {
   try {
     const res = await fetch('/api/session');
@@ -82,6 +81,10 @@ function renderTabla() {
   let html = '';
   filtrados.forEach(m => {
     const fecha = new Date(m.fecha).toLocaleString('es-ES');
+    const solucionHtml = m.solucion 
+          ? `<span style="color:var(--success); font-size:0.9rem;">${escapeHtml(m.solucion)}</span>`
+          : `<span style="color:#94a3b8; font-size:0.8rem; font-style:italic;">Pendiente por resolver</span>`;
+
     html += `
       <tr>
         <td><input type="checkbox" class="history-checkbox" value="${m.id}" style="cursor: pointer; width: 16px; height: 16px;"></td>
@@ -89,7 +92,7 @@ function renderTabla() {
         <td style="font-weight:600;">${escapeHtml(m.fabricante)} ${escapeHtml(m.modelo)} <br><span style="font-size:0.75rem;color:#94a3b8;">Serie: ${escapeHtml(m.serie || 'N/A')}</span></td>
         <td><span class="badge badge-disponible">${escapeHtml(m.fabricante || '—')}</span></td>
         <td style="color:var(--danger); font-size:0.9rem;">${escapeHtml(m.falla)}</td>
-        <td style="color:var(--success); font-size:0.9rem;">${escapeHtml(m.solucion)}</td>
+        <td>${solucionHtml}</td>
         <td style="font-weight:500;">${escapeHtml(m.tecnico)}</td>
       </tr>
     `;
@@ -97,13 +100,11 @@ function renderTabla() {
   tableBody.innerHTML = html;
 }
 
-// Seleccionar todos
 selectAllHistory.addEventListener('change', (e) => {
   const checkboxes = document.querySelectorAll('.history-checkbox');
   checkboxes.forEach(cb => cb.checked = e.target.checked);
 });
 
-// Eliminar seleccionados
 deleteSelectedHistoryBtn.addEventListener('click', async () => {
   const checkboxes = document.querySelectorAll('.history-checkbox:checked');
   if (checkboxes.length === 0) {
@@ -140,6 +141,5 @@ filterMarca.addEventListener('change', renderTabla);
 
 setInterval(cargarMantenimientos, 10000);
 
-// Iniciar
 verificarAdmin();
 cargarMantenimientos();
