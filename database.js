@@ -62,6 +62,11 @@ async function initDB() {
     )
   `);
 
+  // AGREGAR NUEVA COLUMNA DE PERIFERICOS
+  try {
+    await pool.query(`ALTER TABLE dispositivos ADD COLUMN perifericos VARCHAR(255) DEFAULT ''`);
+  } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS mantenimientos (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -73,6 +78,11 @@ async function initDB() {
       FOREIGN KEY (dispositivo_id) REFERENCES dispositivos(id) ON DELETE CASCADE
     )
   `);
+
+  // AGREGAR NUEVA COLUMNA DE TIPO DE MANTENIMIENTO
+  try {
+    await pool.query(`ALTER TABLE mantenimientos ADD COLUMN tipo_mantenimiento VARCHAR(50) DEFAULT 'Falla'`);
+  } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
 
   const [rows] = await pool.execute('SELECT id FROM usuarios WHERE usuario = ?', ['admin']);
   if (rows.length === 0) {

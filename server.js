@@ -95,7 +95,6 @@ app.post('/api/usuarios', requireAuth, async (req, res) => {
   }
 });
 
-// BORRAR USUARIO (NUEVO)
 app.delete('/api/usuarios/:id', requireAuth, async (req, res) => {
   if (req.session.rol !== 'admin') return res.status(403).json({ error: 'Solo administradores' });
   if (Number(req.params.id) === req.session.userId) return res.status(400).json({ error: 'No puedes eliminarte a ti mismo' });
@@ -122,13 +121,13 @@ app.get('/api/dispositivos', requireAuth, async (req, res) => {
 
 app.post('/api/dispositivos', requireAuth, async (req, res) => {
   try {
-    const { departamento, usuario_responsable, fabricante, modelo, tipo, estado, serie, procesador, nucleos, frecuencia, ram_total, detalles_ram } = req.body;
+    const { departamento, usuario_responsable, fabricante, modelo, tipo, estado, serie, procesador, nucleos, frecuencia, ram_total, detalles_ram, perifericos } = req.body;
     if (!departamento || !tipo) return res.status(400).json({ error: 'Departamento y Tipo son obligatorios.' });
     const pool = getPool();
     const [result] = await pool.execute(`
-      INSERT INTO dispositivos (departamento, usuario_responsable, fabricante, modelo, tipo, estado, serie, procesador, nucleos, frecuencia, ram_total, detalles_ram, creado_por)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [departamento, usuario_responsable || '', fabricante || '', modelo || '', tipo, estado || 'Activo', serie || '', procesador || '', nucleos || '', frecuencia || '', ram_total || '', detalles_ram || '', req.session.userId || null]);
+      INSERT INTO dispositivos (departamento, usuario_responsable, fabricante, modelo, tipo, estado, serie, procesador, nucleos, frecuencia, ram_total, detalles_ram, perifericos, creado_por)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [departamento, usuario_responsable || '', fabricante || '', modelo || '', tipo, estado || 'Activo', serie || '', procesador || '', nucleos || '', frecuencia || '', ram_total || '', detalles_ram || '', perifericos || '', req.session.userId || null]);
     res.json({ ok: true, id: result.insertId });
   } catch (err) { res.status(500).json({ error: 'Error BD: ' + err.message }); }
 });
@@ -136,11 +135,11 @@ app.post('/api/dispositivos', requireAuth, async (req, res) => {
 app.put('/api/dispositivos/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { departamento, usuario_responsable, fabricante, modelo, tipo, estado, serie, procesador, nucleos, frecuencia, ram_total, detalles_ram } = req.body;
+    const { departamento, usuario_responsable, fabricante, modelo, tipo, estado, serie, procesador, nucleos, frecuencia, ram_total, detalles_ram, perifericos } = req.body;
     const pool = getPool();
     await pool.execute(`
-      UPDATE dispositivos SET departamento = ?, usuario_responsable = ?, fabricante = ?, modelo = ?, tipo = ?, estado = ?, serie = ?, procesador = ?, nucleos = ?, frecuencia = ?, ram_total = ?, detalles_ram = ? WHERE id = ?
-    `, [departamento, usuario_responsable || '', fabricante || '', modelo || '', tipo, estado || 'Activo', serie || '', procesador || '', nucleos || '', frecuencia || '', ram_total || '', detalles_ram || '', id]);
+      UPDATE dispositivos SET departamento = ?, usuario_responsable = ?, fabricante = ?, modelo = ?, tipo = ?, estado = ?, serie = ?, procesador = ?, nucleos = ?, frecuencia = ?, ram_total = ?, detalles_ram = ?, perifericos = ? WHERE id = ?
+    `, [departamento, usuario_responsable || '', fabricante || '', modelo || '', tipo, estado || 'Activo', serie || '', procesador || '', nucleos || '', frecuencia || '', ram_total || '', detalles_ram || '', perifericos || '', id]);
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: 'Error BD: ' + err.message }); }
 });
@@ -162,18 +161,16 @@ app.get('/api/dispositivos/:id/mantenimientos', requireAuth, async (req, res) =>
   } catch (err) { res.status(500).json({ error: 'Error al obtener mantenimientos' }); }
 });
 
-// REPORTAR FALLA (Solución opcional)
 app.post('/api/dispositivos/:id/mantenimientos', requireAuth, async (req, res) => {
-  const { falla, solucion } = req.body;
+  const { falla, solucion, tipo_mantenimiento } = req.body;
   if (!falla) return res.status(400).json({ error: 'La Falla reportada es obligatoria.' });
   try {
     const pool = getPool();
-    await pool.execute(`INSERT INTO mantenimientos (dispositivo_id, falla, solucion, tecnico) VALUES (?, ?, ?, ?)`, [req.params.id, falla, solucion || null, req.session.nombre]);
+    await pool.execute(`INSERT INTO mantenimientos (dispositivo_id, falla, solucion, tecnico, tipo_mantenimiento) VALUES (?, ?, ?, ?, ?)`, [req.params.id, falla, solucion || null, req.session.nombre, tipo_mantenimiento || 'Falla']);
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: 'Error BD: ' + err.message }); }
 });
 
-// AGREGAR SOLUCIÓN A UN MANTENIMIENTO PENDIENTE (NUEVO)
 app.put('/api/mantenimientos/:id/solucion', requireAuth, async (req, res) => {
   const { solucion } = req.body;
   if (!solucion) return res.status(400).json({ error: 'La solución es obligatoria.' });
