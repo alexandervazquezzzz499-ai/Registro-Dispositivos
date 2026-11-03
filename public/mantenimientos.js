@@ -9,8 +9,9 @@ const toast = document.getElementById('toast');
 const deleteSelectedHistoryBtn = document.getElementById('deleteSelectedHistoryBtn');
 const selectAllHistory = document.getElementById('selectAllHistory');
 
-function showToast(msg) {
+function showToast(msg, isError = false) {
   toast.textContent = msg;
+  toast.classList.toggle('error', isError);
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 3000);
 }
@@ -52,7 +53,7 @@ async function cargarMantenimientos() {
 
     renderTabla();
   } catch (err) {
-    showToast('Error al cargar datos');
+    showToast('Error al cargar datos', true);
   }
 }
 
@@ -81,9 +82,16 @@ function renderTabla() {
   let html = '';
   filtrados.forEach(m => {
     const fecha = new Date(m.fecha).toLocaleString('es-ES');
-    const solucionHtml = m.solucion 
-          ? `<span style="color:var(--success); font-size:0.9rem;">${escapeHtml(m.solucion)}</span>`
-          : `<span style="color:#94a3b8; font-size:0.8rem; font-style:italic;">Pendiente por resolver</span>`;
+    
+    // Agregamos el botón de edición (✏️) al lado de la solución
+    const solucionHtml = `
+      <div style="display:flex; align-items:center; gap:5px;">
+        <span style="color:${m.solucion ? 'var(--success)' : '#94a3b8'}; font-size:0.85rem; ${!m.solucion ? 'font-style:italic;' : ''}">
+          ${m.solucion ? escapeHtml(m.solucion) : 'Pendiente por resolver'}
+        </span>
+        <button class="btn-edit-solucion" data-id="${m.id}" data-solucion="${escapeHtml(m.solucion || '')}" style="background:none; border:none; cursor:pointer; font-size:1.1rem;" title="Modificar Solución">✏️</button>
+      </div>
+    `;
 
     html += `
       <tr>
@@ -98,6 +106,36 @@ function renderTabla() {
     `;
   });
   tableBody.innerHTML = html;
+
+  // Evento para modificar la solución
+  document.querySelectorAll('.btn-edit-solucion').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const id = e.currentTarget.dataset.id;
+      const actual = e.currentTarget.dataset.solucion;
+      
+      // El prompt mostrará la solución actual (si existe) para poder editarla
+      const nueva = prompt('Modificar solución aplicada:', actual);
+      
+      if (nueva !== null) { // Si el usuario no presionó "Cancelar"
+        if (nueva.trim() === '') {
+          alert('La solución no puede estar vacía.');
+          return;
+        }
+        try {
+          const res = await fetch(`/api/mantenimientos/${id}/solucion`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ solucion: nueva })
+          });
+          if (!res.ok) throw new Error();
+          showToast('Solución actualizada correctamente');
+          cargarMantenimientos(); // Recargar la tabla para ver el cambio
+        } catch (error) {
+          showToast('Error al actualizar la solución', true);
+        }
+      }
+    });
+  });
 }
 
 selectAllHistory.addEventListener('change', (e) => {
@@ -108,7 +146,7 @@ selectAllHistory.addEventListener('change', (e) => {
 deleteSelectedHistoryBtn.addEventListener('click', async () => {
   const checkboxes = document.querySelectorAll('.history-checkbox:checked');
   if (checkboxes.length === 0) {
-    return showToast('Selecciona al menos un registro para eliminar');
+    return showToast('Selecciona al menos un registro para eliminar', true);
   }
 
   if (!confirm(`¿Estás seguro de eliminar ${checkboxes.length} mantenimiento(s)? Esta acción no se puede deshacer.`)) return;

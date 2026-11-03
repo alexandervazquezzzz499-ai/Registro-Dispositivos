@@ -317,10 +317,15 @@ async function openMaintenanceModal(id) {
       historial.forEach(h => {
         const fecha = new Date(h.fecha).toLocaleString('es-ES');
         
-        // Si no hay solución, mostramos el botón para agregarla
-        const solucionHtml = h.solucion 
-          ? `<span style="font-size:0.75rem; color:var(--success);">${escapeHtml(h.solucion)}</span>`
-          : `<button class="btn-agregar-solucion" data-id="${h.id}" style="background:#e3f0ff; color:#1e5bc6; border:none; padding:4px 8px; border-radius:6px; cursor:pointer; font-size:0.7rem;">Agregar Solución</button>`;
+        // Mostramos el texto de la solución y SIEMPRE un botón para editar/agregar
+        const solucionHtml = `
+          <div style="display:flex; align-items:center; gap:5px;">
+            <span style="font-size:0.75rem; color:${h.solucion ? 'var(--success)' : '#94a3b8'}; ${!h.solucion ? 'font-style:italic;' : ''}">
+              ${h.solucion ? escapeHtml(h.solucion) : 'Pendiente'}
+            </span>
+            <button class="btn-agregar-solucion" data-id="${h.id}" data-solucion="${escapeHtml(h.solucion || '')}" style="background:none; border:none; cursor:pointer; font-size:1rem;" title="Modificar Solución">✏️</button>
+          </div>
+        `;
           
         html += `
           <tr>
@@ -333,16 +338,19 @@ async function openMaintenanceModal(id) {
       });
       maintenanceHistoryBody.innerHTML = html;
 
-      // Evento para cuando hacen clic en "Agregar Solución"
+      // Evento para editar la solución (trae el texto actual en el prompt)
       document.querySelectorAll('.btn-agregar-solucion').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           const mantId = e.currentTarget.dataset.id;
-          const solucion = prompt('Escribe la solución aplicada para esta falla:');
-          if (solucion && solucion.trim() !== '') {
+          const actual = e.currentTarget.dataset.solucion;
+          
+          const solucion = prompt('Escribe o modifica la solución aplicada:', actual);
+          
+          if (solucion !== null && solucion.trim() !== '') {
             if (contieneGroserias(solucion)) return showToast('La solución contiene palabras no permitidas.', true);
             try {
               await apiFetch(`/api/mantenimientos/${mantId}/solucion`, { method: 'PUT', body: JSON.stringify({ solucion }) });
-              showToast('Solución agregada correctamente');
+              showToast('Solución guardada correctamente');
               openMaintenanceModal(currentMaintenanceDeviceId);
             } catch (err) { showToast(err.message, true); }
           }
