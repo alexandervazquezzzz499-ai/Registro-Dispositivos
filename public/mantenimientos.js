@@ -8,6 +8,7 @@ const filterMarca = document.getElementById('filterMarca');
 const toast = document.getElementById('toast');
 const deleteSelectedHistoryBtn = document.getElementById('deleteSelectedHistoryBtn');
 const selectAllHistory = document.getElementById('selectAllHistory');
+const exportMonthlyPdfBtn = document.getElementById('exportMonthlyPdfBtn'); // NUEVO
 
 function showToast(msg, isError = false) {
   toast.textContent = msg;
@@ -83,7 +84,6 @@ function renderTabla() {
   filtrados.forEach(m => {
     const fecha = new Date(m.fecha).toLocaleString('es-ES');
     
-    // Agregamos el botón de edición (✏️) al lado de la solución
     const solucionHtml = `
       <div style="display:flex; align-items:center; gap:5px;">
         <span style="color:${m.solucion ? 'var(--success)' : '#94a3b8'}; font-size:0.85rem; ${!m.solucion ? 'font-style:italic;' : ''}">
@@ -93,12 +93,17 @@ function renderTabla() {
       </div>
     `;
 
+    const tipoBadge = m.tipo_mantenimiento === 'Cambio de Hardware' 
+      ? '<span class="badge badge-mantenimiento">Cambio HW</span>' 
+      : '<span class="badge badge-falla">Falla</span>';
+
     html += `
       <tr>
         <td><input type="checkbox" class="history-checkbox" value="${m.id}" style="cursor: pointer; width: 16px; height: 16px;"></td>
         <td style="font-size:0.85rem; color:#64748b;">${fecha}</td>
         <td style="font-weight:600;">${escapeHtml(m.fabricante)} ${escapeHtml(m.modelo)} <br><span style="font-size:0.75rem;color:#94a3b8;">Serie: ${escapeHtml(m.serie || 'N/A')}</span></td>
         <td><span class="badge badge-disponible">${escapeHtml(m.fabricante || '—')}</span></td>
+        <td>${tipoBadge}</td>
         <td style="color:var(--danger); font-size:0.9rem;">${escapeHtml(m.falla)}</td>
         <td>${solucionHtml}</td>
         <td style="font-weight:500;">${escapeHtml(m.tecnico)}</td>
@@ -107,16 +112,14 @@ function renderTabla() {
   });
   tableBody.innerHTML = html;
 
-  // Evento para modificar la solución
   document.querySelectorAll('.btn-edit-solucion').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       const id = e.currentTarget.dataset.id;
       const actual = e.currentTarget.dataset.solucion;
       
-      // El prompt mostrará la solución actual (si existe) para poder editarla
       const nueva = prompt('Modificar solución aplicada:', actual);
       
-      if (nueva !== null) { // Si el usuario no presionó "Cancelar"
+      if (nueva !== null) {
         if (nueva.trim() === '') {
           alert('La solución no puede estar vacía.');
           return;
@@ -129,7 +132,7 @@ function renderTabla() {
           });
           if (!res.ok) throw new Error();
           showToast('Solución actualizada correctamente');
-          cargarMantenimientos(); // Recargar la tabla para ver el cambio
+          cargarMantenimientos();
         } catch (error) {
           showToast('Error al actualizar la solución', true);
         }
@@ -172,6 +175,52 @@ deleteSelectedHistoryBtn.addEventListener('click', async () => {
     showToast('Registros eliminados correctamente');
   }
   cargarMantenimientos();
+});
+
+// GENERAR REPORTE MENSUAL PDF
+exportMonthlyPdfBtn.addEventListener('click', () => {
+  if (todosMantenimientos.length === 0) return showToast('No hay datos para exportar', true);
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('landscape');
+  
+  const hoy = new Date();
+  const mesActual = hoy.getMonth();
+  const anioActual = hoy.getFullYear();
+  
+  const mantMes = todosMantenimientos.filter(m => {
+    const fechaM = new Date(m.fecha);
+    return fechaM.getMonth() === mesActual && fechaM.getFullYear() === anioActual;
+  });
+
+  if (mantMes.length === 0) return showToast('No hay mantenimientos registrados este mes', true);
+
+  doc.setFontSize(16);
+  doc.text(`REPORTE DE MANTENIMIENTOS - ${hoy.toLocaleString('es-ES', { month: 'long', year: 'numeric' }).toUpperCase()}`, 14, 15);
+  
+  doc.setFontSize(10);
+  doc.text(`Total de registros este mes: ${mantMes.length}`, 14, 23);
+
+  const tableData = mantMes.map(m => [
+    new Date(m.fecha).toLocaleDateString(),
+    `${m.fabricante} ${m.modelo}\n(S/N: ${m.serie || 'N/A'})`,
+    m.tipo_mantenimiento || 'Falla',
+    m.falla,
+    m.solucion || 'Pendiente',
+    m.tecnico
+  ]);
+
+  doc.autoTable({
+    startY: 30,
+    head: [['Fecha', 'Equipo', 'Tipo', 'Falla / Componente', 'Solución', 'Técnico']],
+    body: tableData,
+    theme: 'striped',
+    headStyles: { fillColor: [30, 43, 60] },
+    styles: { fontSize: 8 }
+  });
+
+  doc.save(`Reporte_Mensual_${mesActual+1}_${anioActual}.pdf`);
+  showToast('Reporte mensual generado');
 });
 
 searchInput.addEventListener('input', renderTabla);

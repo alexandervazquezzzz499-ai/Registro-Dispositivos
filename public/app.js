@@ -58,6 +58,7 @@ const fieldNucleos = document.getElementById('nucleos');
 const fieldFrecuencia = document.getElementById('frecuencia');
 const fieldRamTotal = document.getElementById('ram_total');
 const fieldDetallesRam = document.getElementById('detalles_ram');
+const fieldPerifericos = document.getElementById('perifericos'); // NUEVO
 
 const TIPOS_VALIDOS = ['Desktop', 'All In One', 'Portátil', 'Monitor', 'Impresora', 'Servidor', 'Otro'];
 
@@ -110,7 +111,8 @@ function mapearColumna(col) {
     'nucleos/cpus': 'nucleos', 'nucleos': 'nucleos', 
     'frecuencia cpu': 'frecuencia', 'frecuencia': 'frecuencia',
     'ram capacidad total': 'ram_total', 'ram total': 'ram_total', 'ram': 'ram_total',
-    'detalles ram / ranuras / velocidad': 'detalles_ram', 'detalles ram': 'detalles_ram', 'ram detalles': 'detalles_ram'
+    'detalles ram / ranuras / velocidad': 'detalles_ram', 'detalles ram': 'detalles_ram', 'ram detalles': 'detalles_ram',
+    'perifericos': 'perifericos'
   };
   return mapa[n] || null;
 }
@@ -264,6 +266,9 @@ function renderTable() {
         <td>${getBadgeEstado(d.estado)}</td>
         <td>
           <div class="actions">
+            <button class="btn-icon print" data-id="${d.id}" title="Imprimir Acta de Entrega">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            </button>
             <button class="btn-icon maintenance" data-id="${d.id}" title="Mantenimiento">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
             </button>
@@ -280,6 +285,7 @@ function renderTable() {
   });
   tableBody.innerHTML = html;
 
+  document.querySelectorAll('.btn-icon.print').forEach(btn => btn.addEventListener('click', (e) => generarActaEntregaPDF(e.currentTarget.dataset.id)));
   document.querySelectorAll('.btn-icon.maintenance').forEach(btn => btn.addEventListener('click', (e) => openMaintenanceModal(e.currentTarget.dataset.id)));
   document.querySelectorAll('.btn-icon.edit').forEach(btn => btn.addEventListener('click', (e) => openEditModal(e.currentTarget.dataset.id)));
   document.querySelectorAll('.btn-icon.delete').forEach(btn => btn.addEventListener('click', (e) => {
@@ -288,6 +294,67 @@ function renderTable() {
     if (!d) return;
     mostrarConfirmacion(`¿Eliminar el equipo <b>${escapeHtml(d.modelo)}</b>?`, () => { eliminarDispositivo(id); }, true);
   }));
+}
+
+async function generarActaEntregaPDF(id) {
+  const d = devices.find(x => String(x.id) === String(id));
+  if (!d) return;
+  
+  showToast('Generando PDF...');
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  
+  let historial = [];
+  try { historial = await apiFetch(`/api/dispositivos/${id}/mantenimientos`); } catch(e) {}
+  const cambiosHardware = historial.filter(h => h.tipo_mantenimiento === 'Cambio de Hardware');
+
+  doc.setFontSize(18);
+  doc.text('ACTA DE ENTREGA DE EQUIPO', 105, 20, null, null, 'center');
+  
+  doc.setFontSize(10);
+  doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 20, 30);
+  doc.text(`Técnico: ${currentUser ? currentUser.nombre : 'N/A'}`, 20, 35);
+
+  doc.setFontSize(12);
+  doc.text('Información del Equipo', 20, 50);
+  doc.setFontSize(10);
+  doc.text(`Tipo: ${d.tipo}`, 20, 58);
+  doc.text(`Marca: ${d.fabricante}`, 20, 64);
+  doc.text(`Modelo: ${d.modelo}`, 20, 70);
+  doc.text(`N/S (Serie): ${d.serie || 'N/A'}`, 20, 76);
+  doc.text(`Departamento: ${d.departamento}`, 120, 58);
+  doc.text(`Asignado a: ${d.usuario_responsable || 'N/A'}`, 120, 64);
+
+  doc.text('Periféricos Entregados:', 20, 90);
+  doc.setFontSize(10);
+  doc.text(d.perifericos || 'No se registraron periféricos.', 20, 98);
+
+  if (cambiosHardware.length > 0) {
+    doc.text('Historial de Cambios de Hardware / Mejoras:', 20, 115);
+    const tableData = cambiosHardware.map(h => [
+      new Date(h.fecha).toLocaleDateString(),
+      h.falla,
+      h.solucion || 'Realizado'
+    ]);
+
+    doc.autoTable({
+      startY: 120,
+      head: [['Fecha', 'Componente Modificado/Agregado', 'Detalle/Notas']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [42, 109, 244] }
+    });
+  }
+
+  const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 30 : 150;
+  doc.line(20, finalY, 90, finalY);
+  doc.text('Firma del Técnico', 35, finalY + 5);
+  
+  doc.line(120, finalY, 190, finalY);
+  doc.text('Firma del Usuario (Recibe)', 130, finalY + 5);
+
+  doc.save(`Acta_Entrega_${d.serie || d.id}.pdf`);
+  showToast('PDF generado exitosamente');
 }
 
 async function eliminarDispositivo(id) {
@@ -317,7 +384,6 @@ async function openMaintenanceModal(id) {
       historial.forEach(h => {
         const fecha = new Date(h.fecha).toLocaleString('es-ES');
         
-        // Mostramos el texto de la solución y SIEMPRE un botón para editar/agregar
         const solucionHtml = `
           <div style="display:flex; align-items:center; gap:5px;">
             <span style="font-size:0.75rem; color:${h.solucion ? 'var(--success)' : '#94a3b8'}; ${!h.solucion ? 'font-style:italic;' : ''}">
@@ -329,7 +395,7 @@ async function openMaintenanceModal(id) {
           
         html += `
           <tr>
-            <td style="font-size:0.75rem;">${fecha}</td>
+            <td style="font-size:0.75rem;">${fecha}<br><span style="font-size:0.65rem; color:#64748b;">${h.tipo_mantenimiento || 'Falla'}</span></td>
             <td style="font-size:0.75rem; font-weight:bold;">${escapeHtml(h.tecnico)}</td>
             <td style="font-size:0.75rem; color:var(--danger);">${escapeHtml(h.falla)}</td>
             <td>${solucionHtml}</td>
@@ -338,7 +404,6 @@ async function openMaintenanceModal(id) {
       });
       maintenanceHistoryBody.innerHTML = html;
 
-      // Evento para editar la solución (trae el texto actual en el prompt)
       document.querySelectorAll('.btn-agregar-solucion').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           const mantId = e.currentTarget.dataset.id;
@@ -366,15 +431,19 @@ async function handleMaintenanceSubmit(e) {
   e.preventDefault();
   const falla = document.getElementById('falla').value.trim();
   const solucion = document.getElementById('solucion').value.trim();
+  const tipo_mantenimiento = document.getElementById('tipo_mantenimiento').value;
   
-  if (!falla) return showToast('La falla reportada es obligatoria', true);
+  if (!falla) return showToast('La falla o componente es obligatorio', true);
   
   if (contieneGroserias(falla) || contieneGroserias(solucion)) {
     return showToast('El texto contiene palabras no permitidas.', true);
   }
 
   try {
-    await apiFetch(`/api/dispositivos/${currentMaintenanceDeviceId}/mantenimientos`, { method: 'POST', body: JSON.stringify({ falla, solucion }) });
+    await apiFetch(`/api/dispositivos/${currentMaintenanceDeviceId}/mantenimientos`, { 
+      method: 'POST', 
+      body: JSON.stringify({ falla, solucion, tipo_mantenimiento }) 
+    });
     showToast('Reporte guardado correctamente');
     openMaintenanceModal(currentMaintenanceDeviceId);
     maintenanceForm.reset();
@@ -412,6 +481,7 @@ function openEditModal(id) {
   fieldFrecuencia.value = d.frecuencia || '';
   fieldRamTotal.value = d.ram_total || '';
   fieldDetallesRam.value = d.detalles_ram || '';
+  if(fieldPerifericos) fieldPerifericos.value = d.perifericos || '';
   modalOverlay.classList.add('active');
 }
 
@@ -429,12 +499,13 @@ async function handleFormSubmit(e) {
     fabricante: fieldFabricante.value.trim(), modelo: fieldModelo.value.trim(), tipo: fieldTipo.value, estado: fieldEstado.value,
     serie: fieldSerie ? fieldSerie.value.trim() : '',
     procesador: fieldProcesador.value.trim(), nucleos: fieldNucleos.value.trim(), frecuencia: fieldFrecuencia.value.trim(),
-    ram_total: fieldRamTotal.value.trim(), detalles_ram: fieldDetallesRam.value.trim()
+    ram_total: fieldRamTotal.value.trim(), detalles_ram: fieldDetallesRam.value.trim(),
+    perifericos: fieldPerifericos ? fieldPerifericos.value.trim() : ''
   };
   
   if (!payload.departamento || !payload.tipo) return showToast('Departamento y Tipo son obligatorios', true);
 
-  const camposAValidar = [payload.departamento, payload.usuario_responsable, payload.fabricante, payload.modelo, payload.procesador, payload.detalles_ram];
+  const camposAValidar = [payload.departamento, payload.usuario_responsable, payload.fabricante, payload.modelo, payload.procesador, payload.detalles_ram, payload.perifericos];
   for (let campo of camposAValidar) {
     if (contieneGroserias(campo)) return showToast('El formulario contiene palabras no permitidas.', true);
   }
@@ -456,7 +527,7 @@ function exportarExcel() {
   const filtered = getFilteredDevices();
   if (filtered.length === 0) { showToast('No hay equipos para exportar', true); return; }
   const fecha = new Date();
-  const headers = ['Estado', 'Departamento', 'Usuario', 'Fabricante', 'Modelo', 'Tipo', 'Serie', 'Procesador', 'Núcleos/CPUs', 'Frecuencia CPU', 'RAM Capacidad Total', 'Detalles RAM / Ranuras / Velocidad'];
+  const headers = ['Estado', 'Departamento', 'Usuario', 'Fabricante', 'Modelo', 'Tipo', 'Serie', 'Procesador', 'Núcleos/CPUs', 'Frecuencia CPU', 'RAM Capacidad Total', 'Detalles RAM / Ranuras / Velocidad', 'Periféricos'];
   let filasHtml = '';
   filtered.forEach((d, i) => {
     const zebra = i % 2 === 0 ? '#ffffff' : '#f7f9fd';
@@ -474,10 +545,11 @@ function exportarExcel() {
         <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.frecuencia)}</td>
         <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.ram_total)}</td>
         <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.detalles_ram)}</td>
+        <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.perifericos)}</td>
       </tr>
     `;
   });
-  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table { border-collapse: collapse; }</style></head><body><table><tr><td colspan="12" style="background:#1f4e78; color:white; font-size:16px; font-weight:bold; padding:12px; text-align:center; border:1px solid #143454;">INVENTARIO GENERAL DE EQUIPOS DE CÓMPUTO Y HARDWARE</td></tr><tr><td colspan="12" style="background:#ddebf7; color:#1e2b3c; font-size:10px; padding:6px; text-align:center; border:1px solid #b4c6e7;">Reporte generado el ${fecha.toLocaleDateString()} · Total equipos: ${filtered.length}</td></tr><tr><td colspan="12" style="height:8px;"></td></tr><tr>${headers.map(h => `<th style="background:#1f4e78; color:white; font-size:11px; padding:8px; border:1px solid #143454; text-transform:uppercase;">${h}</th>`).join('')}</tr>${filasHtml}<tr><td colspan="12" style="height:10px;"></td></tr><tr><td colspan="12" style="background:#f2f2f2; color:#666; font-size:10px; padding:6px; text-align:center; border:1px solid #ccc;">TOTAL EQUIPOS REGISTRADOS: ${filtered.length}</td></tr></table></body></html>`;
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table { border-collapse: collapse; }</style></head><body><table><tr><td colspan="13" style="background:#1f4e78; color:white; font-size:16px; font-weight:bold; padding:12px; text-align:center; border:1px solid #143454;">INVENTARIO GENERAL DE EQUIPOS DE CÓMPUTO Y HARDWARE</td></tr><tr><td colspan="13" style="background:#ddebf7; color:#1e2b3c; font-size:10px; padding:6px; text-align:center; border:1px solid #b4c6e7;">Reporte generado el ${fecha.toLocaleDateString()} · Total equipos: ${filtered.length}</td></tr><tr><td colspan="13" style="height:8px;"></td></tr><tr>${headers.map(h => `<th style="background:#1f4e78; color:white; font-size:11px; padding:8px; border:1px solid #143454; text-transform:uppercase;">${h}</th>`).join('')}</tr>${filasHtml}<tr><td colspan="13" style="height:10px;"></td></tr><tr><td colspan="13" style="background:#f2f2f2; color:#666; font-size:10px; padding:6px; text-align:center; border:1px solid #ccc;">TOTAL EQUIPOS REGISTRADOS: ${filtered.length}</td></tr></table></body></html>`;
   const blob = new Blob(['\ufeff', html], { type: 'application/vnd.ms-excel;charset=utf-8' });
   const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `inventario_${fecha.toISOString().slice(0, 10)}.xls`;
   link.click(); URL.revokeObjectURL(link.href); showToast(`Exportados ${filtered.length} equipos`);
@@ -521,7 +593,8 @@ function procesarFilas(filasCrudas) {
       fabricante: datos.fabricante || '', modelo: datos.modelo || '', tipo: tipoCanon,
       estado: datos.estado || 'Activo', serie: datos.serie || '',
       procesador: datos.procesador || '', nucleos: datos.nucleos || '',
-      frecuencia: datos.frecuencia || '', ram_total: datos.ram_total || '', detalles_ram: datos.detalles_ram || ''
+      frecuencia: datos.frecuencia || '', ram_total: datos.ram_total || '', detalles_ram: datos.detalles_ram || '',
+      perifericos: datos.perifericos || ''
     };
     const errores = [];
     if (!dispositivo.departamento) errores.push('Falta Departamento');

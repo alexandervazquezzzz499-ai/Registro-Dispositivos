@@ -6,6 +6,8 @@
   <title>Registro de Dispositivos</title>
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
   <div class="app-container">
@@ -128,6 +130,10 @@
           <div class="form-group"><label>Frecuencia CPU</label><input type="text" id="frecuencia"></div>
           <div class="form-group"><label>RAM Capacidad Total</label><input type="text" id="ram_total"></div>
           <div class="form-group full-width"><label>Detalles RAM</label><input type="text" id="detalles_ram"></div>
+          <div class="form-group full-width">
+            <label>Periféricos Entregados (Mouse, Teclado, Monitor, etc.)</label>
+            <input type="text" id="perifericos" placeholder="Ej: Monitor Dell 24', Mouse USB, Teclado HP">
+          </div>
         </div>
         <div class="modal-actions">
           <button type="button" class="btn-secondary" id="closeModalBtn">Cancelar</button>
@@ -172,16 +178,23 @@
   <!-- MODAL MANTENIMIENTO -->
   <div class="modal-overlay" id="maintenanceModalOverlay">
     <div class="modal">
-      <h2>🛠️ Reportar Falla</h2>
+      <h2>🛠️ Reportar Falla o Cambio</h2>
       <p id="maintenanceDeviceInfo" class="mantenimiento-info"></p>
       <form id="maintenanceForm" class="mantenimiento-form">
-        <div class="form-group"><label>Falla reportada *</label><textarea id="falla" required></textarea></div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label>Tipo de Mantenimiento</label>
+          <select id="tipo_mantenimiento">
+            <option value="Falla">Reportar Falla</option>
+            <option value="Cambio de Hardware">Cambio / Actualización de Hardware</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Falla o Componente Modificado *</label><textarea id="falla" required></textarea></div>
         <div class="form-group" style="margin-top:10px;"><label>Solución aplicada (Opcional por ahora)</label><textarea id="solucion"></textarea></div>
         <button type="submit" class="btn-primary" style="margin-top:15px; width:100%;">Guardar Reporte</button>
       </form>
       <div class="import-preview-wrapper" style="max-height: 250px;">
         <table class="import-preview">
-          <thead><tr><th>Fecha</th><th>Técnico</th><th>Falla</th><th>Solución</th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Técnico</th><th>Falla / Componente</th><th>Solución</th></tr></thead>
           <tbody id="maintenanceHistoryBody"></tbody>
         </table>
       </div>
@@ -238,6 +251,6 @@
   </div>
 
   <div class="toast" id="toast">Guardado</div>
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

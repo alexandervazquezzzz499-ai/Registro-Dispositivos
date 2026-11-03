@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Historial de Mantenimientos</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
   <div class="app-container">
@@ -25,7 +27,11 @@
         <select id="filterMarca">
           <option value="">Todas las marcas</option>
         </select>
-        <!-- BOTÓN PARA BORRAR SELECCIONADOS (OCULTO POR DEFECTO) -->
+        
+        <button class="btn-primary" id="exportMonthlyPdfBtn" style="background:#d97706; box-shadow: 0 6px 16px rgba(217, 119, 6, 0.25);">
+          📄 Reporte Mensual PDF
+        </button>
+
         <button class="btn-primary" id="deleteSelectedHistoryBtn" style="background:#dc2626; box-shadow: 0 6px 16px rgba(220, 38, 38, 0.25); display: none;">🗑️ Eliminar Seleccionados</button>
       </div>
     </div>
@@ -38,7 +44,8 @@
             <th>FECHA</th>
             <th>EQUIPO</th>
             <th>MARCA</th>
-            <th>FALLA REPORTADA</th>
+            <th>TIPO</th>
+            <th>FALLA / COMPONENTE</th>
             <th>SOLUCIÓN APLICADA</th>
             <th>TÉCNICO</th>
           </tr>
@@ -52,6 +59,6 @@
   </div>
 
   <div class="toast" id="toast">Cargando...</div>
-  <script src="mantenimientos.js?v=6"></script>
+  <script src="mantenimientos.js?v=7"></script>
 </body>
 </html>
