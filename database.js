@@ -68,10 +68,18 @@ async function initDB() {
     await pool.query(`ALTER TABLE dispositivos ADD COLUMN perifericos VARCHAR(255) DEFAULT ''`);
   } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
 
-  // AGREGAR NUEVA COLUMNA DE CODIGO QR
+  // AGREGAR NUEVA COLUMNA DE CODIGO QR (SIN UNIQUE)
   try {
-    await pool.query(`ALTER TABLE dispositivos ADD COLUMN qr_code VARCHAR(100) UNIQUE DEFAULT NULL`);
+    await pool.query(`ALTER TABLE dispositivos ADD COLUMN qr_code VARCHAR(100) DEFAULT NULL`);
   } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
+
+  // CREAR INDICE UNICO PARA qr_code (SI NO EXISTE)
+  try {
+    await pool.query(`ALTER TABLE dispositivos ADD UNIQUE INDEX idx_qr_code (qr_code)`);
+  } catch (err) { 
+    // Si el índice ya existe, ignorar
+    if (err.code !== 'ER_DUP_KEYNAME' && err.code !== 'ER_DUP_INDEX') console.log(err); 
+  }
 
   // GENERAR QR PARA LOS EQUIPOS QUE YA EXISTEN Y NO TIENEN
   const [equiposSinQr] = await pool.query('SELECT id FROM dispositivos WHERE qr_code IS NULL');
