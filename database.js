@@ -68,7 +68,7 @@ async function initDB() {
     await pool.query(`ALTER TABLE dispositivos ADD COLUMN perifericos VARCHAR(255) DEFAULT ''`);
   } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
 
-  // AGREGAR NUEVA COLUMNA DE CODIGO QR (SIN UNIQUE)
+  // AGREGAR COLUMNA qr_code SIN UNIQUE (PlanetScale no lo permite en ALTER)
   try {
     await pool.query(`ALTER TABLE dispositivos ADD COLUMN qr_code VARCHAR(100) DEFAULT NULL`);
   } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
