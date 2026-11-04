@@ -2,6 +2,7 @@ let devices = [];
 let currentUser = null;
 let importRows = [];
 let currentMaintenanceDeviceId = null;
+let notificacionesPrevias = []; // Para no repetir toasts
 
 const PALABRAS_GROSERAS = ['mierda', 'pendejo', 'cabron', 'cabrón', 'verga', 'coño', 'joder', 'estupido', 'estúpido', 'idiota', 'culero', 'marico', 'maricón', 'zorra', 'perra', 'gonorrea', 'malparido', 'hijueputa', 'imbecil', 'imbécil'];
 
@@ -46,6 +47,20 @@ const confirmMessage = document.getElementById('confirmMessage');
 const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
 const acceptConfirmBtn = document.getElementById('acceptConfirmBtn');
 
+const configBtn = document.getElementById('configBtn');
+const configModalOverlay = document.getElementById('configModalOverlay');
+const closeConfigModalBtn = document.getElementById('closeConfigModalBtn');
+const configDias = document.getElementById('configDias');
+const saveDiasBtn = document.getElementById('saveDiasBtn');
+const festivoForm = document.getElementById('festivoForm');
+const festivosTableBody = document.getElementById('festivosTableBody');
+
+const notifBellBtn = document.getElementById('notifBellBtn');
+const notifBadge = document.getElementById('notifBadge');
+const notifDropdown = document.getElementById('notifDropdown');
+const notifList = document.getElementById('notifList');
+const closeNotifBtn = document.getElementById('closeNotifBtn');
+
 const qrModalOverlay = document.getElementById('qrModalOverlay');
 const qrDeviceInfo = document.getElementById('qrDeviceInfo');
 const qrcodeContainer = document.getElementById('qrcode');
@@ -69,11 +84,12 @@ const fieldPerifericos = document.getElementById('perifericos');
 
 const TIPOS_VALIDOS = ['Desktop', 'All In One', 'Portátil', 'Monitor', 'Impresora', 'Servidor', 'Otro'];
 
-/* SVGs reutilizables (sin emojis en ningun lado) */
 const SVG_TRASH = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
 const SVG_PENCIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>';
 const SVG_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
 const SVG_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+const SVG_TOOL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>';
+const SVG_REFRESH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>';
 
 function showToast(message, isError = false) {
   toast.textContent = message;
@@ -108,6 +124,7 @@ function getBadgeEstado(estado) {
   else if (est.includes('baja')) clase = 'badge-baja';
   else if (est.includes('disponible')) clase = 'badge-disponible';
   else if (est.includes('falla')) clase = 'badge-falla';
+  else if (est.includes('bloqueado')) clase = 'badge-bloqueado';
   return `<span class="badge ${clase}">${escapeHtml(estado)}</span>`;
 }
 
@@ -152,6 +169,48 @@ function mostrarConfirmacion(mensaje, callbackAceptar, esEliminar = false) {
 
 function cerrarConfirmacion() { confirmModalOverlay.classList.remove('active'); }
 
+// NOTIFICACIONES
+async function cargarNotificaciones() {
+  try {
+    const notifs = await apiFetch('/api/notificaciones');
+    
+    // Mostrar en el dropdown
+    if (notifs.length === 0) {
+      notifList.innerHTML = `<div style="padding:1rem; text-align:center; color:var(--text-subtle); font-size:0.8125rem;">No hay notificaciones recientes</div>`;
+      notifBadge.style.display = 'none';
+    } else {
+      notifBadge.textContent = notifs.length;
+      notifBadge.style.display = 'flex';
+      
+      let html = '';
+      notifs.forEach(n => {
+        const isReport = n.type === 'reporte';
+        html += `
+          <div class="notif-item">
+            <div class="notif-icon ${isReport ? 'report' : 'update'}">${isReport ? SVG_TOOL : SVG_REFRESH}</div>
+            <div class="notif-content">
+              <div class="notif-title">${escapeHtml(n.title)}</div>
+              <div class="notif-desc">${escapeHtml(n.desc)}</div>
+              <span class="notif-time">${new Date(n.date).toLocaleString('es-ES')}</span>
+            </div>
+          </div>
+        `;
+      });
+      notifList.innerHTML = html;
+    }
+
+    // Opcional: Lanzar toast si hay una nueva notificacion (comparando con el estado anterior)
+    if (notificacionesPrevias.length > 0 && notifs.length > 0) {
+      if (notifs[0].date !== notificacionesPrevias[0].date) {
+        showToast('Tienes una nueva notificacion', false);
+      }
+    }
+    notificacionesPrevias = notifs;
+    
+  } catch (err) { console.error('Error al cargar notificaciones', err); }
+}
+
+// USUARIOS Y CONFIGURACION
 async function abrirModalUsuarios() {
   usersModalOverlay.classList.add('active');
   usersTableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Cargando usuarios...</td></tr>`;
@@ -184,8 +243,30 @@ async function abrirModalUsuarios() {
         mostrarConfirmacion(`¿Eliminar al usuario <b>${nombre}</b>?`, () => { eliminarUsuario(id); }, true);
       });
     });
-
   } catch (err) { usersTableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--danger);">Error al cargar usuarios</td></tr>`; }
+}
+
+async function abrirModalConfig() {
+  configModalOverlay.classList.add('active');
+  try {
+    const config = await apiFetch('/api/configuracion');
+    configDias.value = config.dias_inactividad;
+    
+    let html = '';
+    config.festivos.forEach(f => {
+      const dateStr = new Date(f.fecha).toLocaleDateString();
+      html += `<tr><td>${dateStr}</td><td>${escapeHtml(f.nombre)}</td><td><button class="btn-icon delete-festivo" data-id="${f.id}" title="Eliminar">${SVG_TRASH}</button></td></tr>`;
+    });
+    festivosTableBody.innerHTML = html || '<tr><td colspan="3" style="text-align:center; color:var(--text-subtle);">No hay festivos configurados</td></tr>';
+
+    document.querySelectorAll('.delete-festivo').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = e.currentTarget.dataset.id;
+        await apiFetch(`/api/festivos/${id}`, { method: 'DELETE' });
+        abrirModalConfig(); 
+      });
+    });
+  } catch (err) { showToast(err.message, true); }
 }
 
 async function eliminarUsuario(id) {
@@ -200,16 +281,9 @@ async function handleNewUserSubmit(e) {
   e.preventDefault();
   const nombre = document.getElementById('newUserNombre').value.trim();
   const usuario = document.getElementById('newUserUsername').value.trim();
-
-  if (contieneGroserias(nombre) || contieneGroserias(usuario)) {
-    return showToast('El nombre o usuario contiene palabras no permitidas.', true);
-  }
-
-  const payload = {
-    nombre: nombre, usuario: usuario,
-    password: document.getElementById('newUserPassword').value,
-    rol: document.getElementById('newUserRol').value
-  };
+  if (contieneGroserias(nombre) || contieneGroserias(usuario)) return showToast('El nombre o usuario contiene palabras no permitidas.', true);
+  
+  const payload = { nombre, usuario, password: document.getElementById('newUserPassword').value, rol: document.getElementById('newUserRol').value };
   try {
     await apiFetch('/api/usuarios', { method: 'POST', body: JSON.stringify(payload) });
     showToast('Usuario creado exitosamente');
@@ -273,22 +347,21 @@ function renderTable() {
   filtered.forEach(d => {
     let deptoMostrar = d.departamento || '—';
     let duenoMostrar = d.usuario_responsable || '—';
-
     if (duenoMostrar === '—' && deptoMostrar.includes(' - ')) {
       const partes = deptoMostrar.split(' - ');
       deptoMostrar = partes[0].trim();
       duenoMostrar = partes.slice(1).join(' - ').trim();
     }
 
-    const btnNota = d.estado === 'Disponible'
-      ? `<button class="btn-icon print" data-id="${d.id}" title="Imprimir Nota de Entrega">
-           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-         </button>`
+    const bloqueado = d.estado === 'Bloqueado';
+
+    const btnNota = (d.estado === 'Disponible' && !bloqueado)
+      ? `<button class="btn-icon print" data-id="${d.id}" title="Imprimir Nota de Entrega"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg></button>`
       : '';
 
-    const btnQr = `<button class="btn-icon qr" data-id="${d.id}" title="Ver Código QR">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-    </button>`;
+    const btnMaintenance = !bloqueado 
+      ? `<button class="btn-icon maintenance" data-id="${d.id}" title="Mantenimiento"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg></button>`
+      : `<button class="btn-icon unblock" data-id="${d.id}" title="Desbloquear Equipo" style="color:#F43F5E;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg></button>`;
 
     html += `
       <tr data-id="${d.id}">
@@ -301,16 +374,10 @@ function renderTable() {
         <td>
           <div class="actions">
             ${btnNota}
-            ${btnQr}
-            <button class="btn-icon maintenance" data-id="${d.id}" title="Mantenimiento">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
-            </button>
-            <button class="btn-icon edit" data-id="${d.id}" title="Editar">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
-            </button>
-            <button class="btn-icon delete" data-id="${d.id}" title="Eliminar">
-              ${SVG_TRASH}
-            </button>
+            <button class="btn-icon qr" data-id="${d.id}" title="Ver Código QR"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></button>
+            ${btnMaintenance}
+            <button class="btn-icon edit" data-id="${d.id}" title="Editar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg></button>
+            <button class="btn-icon delete" data-id="${d.id}" title="Eliminar">${SVG_TRASH}</button>
           </div>
         </td>
       </tr>
@@ -321,6 +388,16 @@ function renderTable() {
   document.querySelectorAll('.btn-icon.print').forEach(btn => btn.addEventListener('click', (e) => generarNotaEntregaPDF(e.currentTarget.dataset.id)));
   document.querySelectorAll('.btn-icon.qr').forEach(btn => btn.addEventListener('click', (e) => mostrarQRModal(e.currentTarget.dataset.id)));
   document.querySelectorAll('.btn-icon.maintenance').forEach(btn => btn.addEventListener('click', (e) => openMaintenanceModal(e.currentTarget.dataset.id)));
+  document.querySelectorAll('.btn-icon.unblock').forEach(btn => btn.addEventListener('click', async (e) => {
+    const id = e.currentTarget.dataset.id;
+    mostrarConfirmacion('¿Desbloquear este equipo y reactivar su contador de inactividad?', async () => {
+      try {
+        await apiFetch(`/api/dispositivos/${id}/desbloquear`, { method: 'POST' });
+        showToast('Equipo desbloqueado correctamente');
+        await cargarDispositivos();
+      } catch (err) { showToast(err.message, true); }
+    });
+  }));
   document.querySelectorAll('.btn-icon.edit').forEach(btn => btn.addEventListener('click', (e) => openEditModal(e.currentTarget.dataset.id)));
   document.querySelectorAll('.btn-icon.delete').forEach(btn => btn.addEventListener('click', (e) => {
     const id = e.currentTarget.dataset.id;
@@ -333,48 +410,30 @@ function renderTable() {
 function mostrarQRModal(id) {
   const d = devices.find(x => String(x.id) === String(id));
   if (!d) return;
-
   qrDeviceInfo.textContent = `${d.fabricante} ${d.modelo} (S/N: ${d.serie || 'N/A'})`;
   qrcodeContainer.innerHTML = '';
-
   const qrUrl = `${window.location.origin}/?qr=${d.qr_code}`;
-
-  new QRCode(qrcodeContainer, {
-    text: qrUrl,
-    width: 200,
-    height: 200,
-    colorDark : "#0A0E1A",
-    colorLight : "#FFFFFF",
-    correctLevel : QRCode.CorrectLevel.H
-  });
-
+  new QRCode(qrcodeContainer, { text: qrUrl, width: 200, height: 200, colorDark : "#0A0E1A", colorLight : "#FFFFFF", correctLevel : QRCode.CorrectLevel.H });
   qrModalOverlay.classList.add('active');
 }
 
 async function generarNotaEntregaPDF(id) {
   const d = devices.find(x => String(x.id) === String(id));
-  if (!d) return;
-
-  if (d.estado !== 'Disponible') {
-    return showToast('Solo se pueden generar notas para equipos en estado DISPONIBLE', true);
-  }
+  if (!d || d.estado !== 'Disponible') return;
 
   showToast('Generando Nota de Entrega...');
   const { jsPDF } = window.jspdf;
-
   const doc = new jsPDF('p', 'mm', 'letter');
-
+  
   let historial = [];
   try { historial = await apiFetch(`/api/dispositivos/${id}/mantenimientos`); } catch(e) {}
   const cambiosHardware = historial.filter(h => h.tipo_mantenimiento === 'Cambio de Hardware');
 
   doc.setFontSize(18);
   doc.text('NOTA DE ENTREGA DE EQUIPO', 108, 20, null, null, 'center');
-
   doc.setFontSize(10);
   doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 20, 30);
   doc.text(`Tecnico: ${currentUser ? currentUser.nombre : 'N/A'}`, 20, 35);
-
   doc.setFontSize(12);
   doc.text('Informacion del Equipo', 20, 50);
   doc.setFontSize(10);
@@ -384,23 +443,16 @@ async function generarNotaEntregaPDF(id) {
   doc.text(`N/S (Serie): ${d.serie || 'N/A'}`, 20, 76);
   doc.text(`Departamento: ${d.departamento}`, 120, 58);
   doc.text(`Asignado a: ${d.usuario_responsable || 'N/A'}`, 120, 64);
-
   doc.text('Perifericos Entregados:', 20, 90);
   doc.setFontSize(10);
   doc.text(d.perifericos || 'No se registraron perifericos.', 20, 98);
 
   if (cambiosHardware.length > 0) {
     doc.text('Historial de Cambios de Hardware / Mejoras:', 20, 115);
-    const tableData = cambiosHardware.map(h => [
-      new Date(h.fecha).toLocaleDateString(),
-      h.falla,
-      h.solucion || 'Realizado'
-    ]);
-
     doc.autoTable({
       startY: 120,
       head: [['Fecha', 'Componente Modificado/Agregado', 'Detalle/Notas']],
-      body: tableData,
+      body: cambiosHardware.map(h => [new Date(h.fecha).toLocaleDateString(), h.falla, h.solucion || 'Realizado']),
       theme: 'grid',
       headStyles: { fillColor: [13, 20, 36] }
     });
@@ -409,10 +461,8 @@ async function generarNotaEntregaPDF(id) {
   const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 30 : 150;
   doc.line(20, finalY, 90, finalY);
   doc.text('Firma del Tecnico', 35, finalY + 5);
-
   doc.line(120, finalY, 190, finalY);
   doc.text('Firma del Usuario (Recibe)', 130, finalY + 5);
-
   doc.save(`Nota_Entrega_${d.serie || d.id}.pdf`);
   showToast('Nota de Entrega generada exitosamente');
 }
@@ -428,6 +478,8 @@ async function eliminarDispositivo(id) {
 async function openMaintenanceModal(id) {
   const d = devices.find(x => String(x.id) === String(id));
   if (!d) return;
+  if (d.estado === 'Bloqueado') return showToast('El equipo esta bloqueado. Debes desbloquearlo primero.', true);
+  
   currentMaintenanceDeviceId = id;
   const nombreTecnico = currentUser ? currentUser.nombre : 'Desconocido';
   maintenanceDeviceInfo.innerHTML = `Equipo: <b>${escapeHtml(d.fabricante)} ${escapeHtml(d.modelo)}</b><br><span style="color:var(--accent); font-weight:600; font-size:0.75rem;">Tecnico en sesion: ${escapeHtml(nombreTecnico)}</span>`;
@@ -443,7 +495,6 @@ async function openMaintenanceModal(id) {
       let html = '';
       historial.forEach(h => {
         const fecha = new Date(h.fecha).toLocaleString('es-ES');
-
         const solucionHtml = `
           <div style="display:flex; align-items:center; gap:6px;">
             <span style="font-size:0.75rem; color:${h.solucion ? 'var(--accent)' : 'var(--text-subtle)'}; ${!h.solucion ? 'font-style:italic;' : ''}">
@@ -452,7 +503,6 @@ async function openMaintenanceModal(id) {
             <button class="btn-inline btn-agregar-solucion" data-id="${h.id}" data-solucion="${escapeHtml(h.solucion || '')}" title="Modificar Solucion">${SVG_PENCIL}</button>
           </div>
         `;
-
         html += `
           <tr>
             <td style="font-size:0.75rem;">${fecha}<br><span style="font-size:0.625rem; color:var(--text-subtle); text-transform:uppercase; letter-spacing:0.06em;">${h.tipo_mantenimiento || 'Falla'}</span></td>
@@ -468,9 +518,7 @@ async function openMaintenanceModal(id) {
         btn.addEventListener('click', async (e) => {
           const mantId = e.currentTarget.dataset.id;
           const actual = e.currentTarget.dataset.solucion;
-
           const solucion = prompt('Escribe o modifica la solucion aplicada:', actual);
-
           if (solucion !== null && solucion.trim() !== '') {
             if (contieneGroserias(solucion)) return showToast('La solucion contiene palabras no permitidas.', true);
             try {
@@ -492,18 +540,11 @@ async function handleMaintenanceSubmit(e) {
   const falla = document.getElementById('falla').value.trim();
   const solucion = document.getElementById('solucion').value.trim();
   const tipo_mantenimiento = document.getElementById('tipo_mantenimiento').value;
-
   if (!falla) return showToast('La falla o componente es obligatorio', true);
-
-  if (contieneGroserias(falla) || contieneGroserias(solucion)) {
-    return showToast('El texto contiene palabras no permitidas.', true);
-  }
+  if (contieneGroserias(falla) || contieneGroserias(solucion)) return showToast('El texto contiene palabras no permitidas.', true);
 
   try {
-    await apiFetch(`/api/dispositivos/${currentMaintenanceDeviceId}/mantenimientos`, {
-      method: 'POST',
-      body: JSON.stringify({ falla, solucion, tipo_mantenimiento })
-    });
+    await apiFetch(`/api/dispositivos/${currentMaintenanceDeviceId}/mantenimientos`, { method: 'POST', body: JSON.stringify({ falla, solucion, tipo_mantenimiento }) });
     showToast('Reporte guardado correctamente');
     openMaintenanceModal(currentMaintenanceDeviceId);
     maintenanceForm.reset();
@@ -564,7 +605,6 @@ async function handleFormSubmit(e) {
   };
 
   if (!payload.departamento || !payload.tipo) return showToast('Departamento y Tipo son obligatorios', true);
-
   const camposAValidar = [payload.departamento, payload.usuario_responsable, payload.fabricante, payload.modelo, payload.procesador, payload.detalles_ram, payload.perifericos];
   for (let campo of camposAValidar) {
     if (contieneGroserias(campo)) return showToast('El formulario contiene palabras no permitidas.', true);
@@ -723,10 +763,7 @@ async function manejarArchivoSeleccionado(file) {
       let indiceFilaEncabezado = -1;
       for (let i = 0; i < matrizCruda.length; i++) {
         const fila = matrizCruda[i].map(c => normalizar(String(c)));
-        if (fila.includes('departamento') || fila.includes('modelo') || fila.includes('fabricante')) {
-          indiceFilaEncabezado = i;
-          break;
-        }
+        if (fila.includes('departamento') || fila.includes('modelo') || fila.includes('fabricante')) { indiceFilaEncabezado = i; break; }
       }
       if (indiceFilaEncabezado === -1) { showToast('No se encontraron los encabezados en el archivo.', true); return; }
       const encabezados = matrizCruda[indiceFilaEncabezado];
@@ -765,9 +802,7 @@ async function confirmarImportacion() {
   const selects = document.querySelectorAll('.import-state-select');
   selects.forEach(sel => {
     const idx = parseInt(sel.dataset.index);
-    if(importRows[idx]) {
-      importRows[idx].dispositivo.estado = sel.value;
-    }
+    if(importRows[idx]) importRows[idx].dispositivo.estado = sel.value;
   });
 
   let ok = 0, fail = 0, primerErrorMsg = '';
@@ -802,6 +837,31 @@ function initEvents() {
   usersModalOverlay.addEventListener('click', (e) => { if (e.target === usersModalOverlay) usersModalOverlay.classList.remove('active'); });
   newUserForm.addEventListener('submit', handleNewUserSubmit);
 
+  configBtn.addEventListener('click', abrirModalConfig);
+  closeConfigModalBtn.addEventListener('click', () => configModalOverlay.classList.remove('active'));
+  configModalOverlay.addEventListener('click', (e) => { if (e.target === configModalOverlay) configModalOverlay.classList.remove('active'); });
+  saveDiasBtn.addEventListener('click', async () => {
+    try {
+      await apiFetch('/api/configuracion/dias', { method: 'POST', body: JSON.stringify({ dias: configDias.value }) });
+      showToast('Dias actualizados y equipos re-evaluados');
+      await cargarDispositivos();
+    } catch (err) { showToast(err.message, true); }
+  });
+  festivoForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await apiFetch('/api/festivos', { method: 'POST', body: JSON.stringify({ fecha: document.getElementById('festivoFecha').value, nombre: document.getElementById('festivoNombre').value }) });
+      festivoForm.reset();
+      abrirModalConfig();
+    } catch (err) { showToast(err.message, true); }
+  });
+
+  notifBellBtn.addEventListener('click', () => notifDropdown.classList.toggle('active'));
+  closeNotifBtn.addEventListener('click', () => notifDropdown.classList.remove('active'));
+  document.addEventListener('click', (e) => {
+    if (!notifBellBtn.contains(e.target) && !notifDropdown.contains(e.target)) notifDropdown.classList.remove('active');
+  });
+
   cancelConfirmBtn.addEventListener('click', cerrarConfirmacion);
   confirmModalOverlay.addEventListener('click', (e) => { if (e.target === confirmModalOverlay) cerrarConfirmacion(); });
 
@@ -815,13 +875,12 @@ function initEvents() {
   passwordModalOverlay.addEventListener('click', (e) => { if (e.target === passwordModalOverlay) closePasswordModalBtn.click(); });
   passwordForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const actual = document.getElementById('passActual').value;
     const nueva = document.getElementById('passNueva').value;
     const confirmar = document.getElementById('passConfirmar').value;
     if (nueva !== confirmar) return showToast('Las contrasenas no coinciden', true);
     if (nueva.length < 6) return showToast('Minimo 6 caracteres', true);
     try {
-      await apiFetch('/api/cambiar-password', { method: 'POST', body: JSON.stringify({ passwordActual: actual, passwordNueva: nueva }) });
+      await apiFetch('/api/cambiar-password', { method: 'POST', body: JSON.stringify({ passwordActual: document.getElementById('passActual').value, passwordNueva: nueva }) });
       showToast('Contrasena actualizada');
       passwordModalOverlay.classList.remove('active');
     } catch (err) { showToast(err.message, true); }
@@ -861,6 +920,8 @@ function initEvents() {
       if (maintenanceModalOverlay.classList.contains('active')) closeMaintenanceModal();
       if (confirmModalOverlay.classList.contains('active')) cerrarConfirmacion();
       if (qrModalOverlay.classList.contains('active')) qrModalOverlay.classList.remove('active');
+      if (configModalOverlay.classList.contains('active')) configModalOverlay.classList.remove('active');
+      if (notifDropdown.classList.contains('active')) notifDropdown.classList.remove('active');
     }
   });
 }
@@ -873,10 +934,19 @@ function initEvents() {
     document.getElementById('userName').textContent = currentUser.nombre;
     document.getElementById('userRole').textContent = currentUser.rol;
     document.getElementById('userAvatar').textContent = currentUser.nombre.charAt(0).toUpperCase();
-    if (currentUser.rol === 'admin') { manageUsersBtn.style.display = 'flex'; }
+    if (currentUser.rol === 'admin') { 
+      manageUsersBtn.style.display = 'flex';
+      configBtn.style.display = 'flex'; 
+    }
   } catch { window.location.href = '/login.html'; }
 
   initEvents();
   await cargarDispositivos();
-  setInterval(() => { cargarDispositivos(true); }, 10000);
+  await cargarNotificaciones();
+  
+  // Polling de actualizacion cada 10 segundos
+  setInterval(() => { 
+    cargarDispositivos(true); 
+    cargarNotificaciones();
+  }, 10000);
 })();
