@@ -46,7 +46,6 @@ const confirmMessage = document.getElementById('confirmMessage');
 const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
 const acceptConfirmBtn = document.getElementById('acceptConfirmBtn');
 
-// ELEMENTOS QR
 const qrModalOverlay = document.getElementById('qrModalOverlay');
 const qrDeviceInfo = document.getElementById('qrDeviceInfo');
 const qrcodeContainer = document.getElementById('qrcode');
@@ -137,7 +136,7 @@ function mostrarConfirmacion(mensaje, callbackAceptar, esEliminar = false) {
   confirmMessage.innerHTML = mensaje;
   const btnAceptar = document.getElementById('acceptConfirmBtn');
   btnAceptar.textContent = 'Aceptar';
-  btnAceptar.style.backgroundColor = esEliminar ? '#dc2626' : '#2a6df4';
+  btnAceptar.className = esEliminar ? 'btn-danger' : 'btn-primary';
   btnAceptar.onclick = () => {
     confirmModalOverlay.classList.remove('active');
     callbackAceptar();
@@ -149,14 +148,14 @@ function cerrarConfirmacion() { confirmModalOverlay.classList.remove('active'); 
 
 async function abrirModalUsuarios() {
   usersModalOverlay.classList.add('active');
-  usersTableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Cargando usuarios...</td></tr>`;
+  usersTableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Cargando usuarios...</td></tr>`;
   try {
     const users = await apiFetch('/api/usuarios');
     let html = '';
     users.forEach(u => {
       const fecha = new Date(u.creado_en).toLocaleDateString();
       const btnEliminar = String(u.id) === String(currentUser.id) 
-        ? '<span style="color:#94a3b8; font-size:0.8rem;">Tú</span>' 
+        ? '<span style="color:var(--text-subtle); font-size:0.75rem;">Tú</span>' 
         : `<button class="btn-icon delete-user" data-id="${u.id}" data-nombre="${escapeHtml(u.nombre)}" title="Eliminar">🗑️</button>`;
 
       html += `
@@ -164,8 +163,8 @@ async function abrirModalUsuarios() {
           <td>${u.id}</td>
           <td style="font-weight:600;">${escapeHtml(u.usuario)}</td>
           <td>${escapeHtml(u.nombre)}</td>
-          <td>${u.rol === 'admin' ? '<span class="badge badge-disponible">Admin</span>' : '<span class="badge badge-activo">Usuario</span>'}</td>
-          <td style="color:var(--text-muted);">${fecha}</td>
+          <td>${u.rol === 'admin' ? '<span class="badge badge-asignado">Admin</span>' : '<span class="badge badge-activo">Usuario</span>'}</td>
+          <td style="color:var(--text-subtle);">${fecha}</td>
           <td>${btnEliminar}</td>
         </tr>
       `;
@@ -176,13 +175,11 @@ async function abrirModalUsuarios() {
       btn.addEventListener('click', (e) => {
         const id = e.currentTarget.dataset.id;
         const nombre = e.currentTarget.dataset.nombre;
-        mostrarConfirmacion(`¿Eliminar al usuario <b>${nombre}</b>?`, () => {
-          eliminarUsuario(id);
-        }, true);
+        mostrarConfirmacion(`¿Eliminar al usuario <b>${nombre}</b>?`, () => { eliminarUsuario(id); }, true);
       });
     });
 
-  } catch (err) { usersTableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">Error al cargar usuarios</td></tr>`; }
+  } catch (err) { usersTableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--danger);">Error al cargar usuarios</td></tr>`; }
 }
 
 async function eliminarUsuario(id) {
@@ -221,14 +218,12 @@ async function cargarDispositivos(silencioso = false) {
     devices = await apiFetch('/api/dispositivos');
     renderTable();
     
-    // LÓGICA PARA ABRIR EL EQUIPO SI SE ESCANEÓ UN QR
     const urlParams = new URLSearchParams(window.location.search);
     const qrParam = urlParams.get('qr');
     if (qrParam && !silencioso) {
       const dev = devices.find(x => x.qr_code === qrParam);
       if (dev) {
         openMaintenanceModal(dev.id);
-        // Limpiar la URL para que no se vuelva a abrir si se recarga
         window.history.replaceState({}, document.title, window.location.pathname);
       } else {
         showToast('Equipo no encontrado con ese QR', true);
@@ -280,13 +275,12 @@ function renderTable() {
     }
 
     const btnNota = d.estado === 'Disponible' 
-      ? `<button class="btn-icon print" data-id="${d.id}" title="Imprimir Nota de Entrega" style="color:#0e7b4c;">
+      ? `<button class="btn-icon print" data-id="${d.id}" title="Imprimir Nota de Entrega">
            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
          </button>` 
       : '';
 
-    // BOTÓN DE QR
-    const btnQr = `<button class="btn-icon qr" data-id="${d.id}" title="Ver Código QR" style="color:#2a6df4;">
+    const btnQr = `<button class="btn-icon qr" data-id="${d.id}" title="Ver Código QR">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
     </button>`;
 
@@ -335,25 +329,22 @@ function mostrarQRModal(id) {
   if (!d) return;
   
   qrDeviceInfo.textContent = `${d.fabricante} ${d.modelo} (S/N: ${d.serie || 'N/A'})`;
-  qrcodeContainer.innerHTML = ''; // Limpiar QR anterior
+  qrcodeContainer.innerHTML = '';
   
-  // La URL a la que llevará el QR. Si estás en producción, usará tu dominio de Render.
-  // El parámetro ?qr=UUID abrirá automáticamente el modal de mantenimiento de ese equipo.
   const qrUrl = `${window.location.origin}/?qr=${d.qr_code}`;
   
   new QRCode(qrcodeContainer, {
     text: qrUrl,
     width: 200,
     height: 200,
-    colorDark : "#1e2b3c",
-    colorLight : "#ffffff",
+    colorDark : "#1A1A1A",
+    colorLight : "#FFFFFF",
     correctLevel : QRCode.CorrectLevel.H
   });
   
   qrModalOverlay.classList.add('active');
 }
 
-// GENERAR NOTA DE ENTREGA EN FORMATO CARTA
 async function generarNotaEntregaPDF(id) {
   const d = devices.find(x => String(x.id) === String(id));
   if (!d) return;
@@ -405,7 +396,7 @@ async function generarNotaEntregaPDF(id) {
       head: [['Fecha', 'Componente Modificado/Agregado', 'Detalle/Notas']],
       body: tableData,
       theme: 'grid',
-      headStyles: { fillColor: [42, 109, 244] }
+      headStyles: { fillColor: [31, 61, 43] }
     });
   }
 
@@ -433,9 +424,9 @@ async function openMaintenanceModal(id) {
   if (!d) return;
   currentMaintenanceDeviceId = id;
   const nombreTecnico = currentUser ? currentUser.nombre : 'Desconocido';
-  maintenanceDeviceInfo.innerHTML = `Equipo: <b>${escapeHtml(d.fabricante)} ${escapeHtml(d.modelo)}</b><br><span style="color:var(--primary); font-weight:bold;">👨‍🔧 Técnico en sesión: ${escapeHtml(nombreTecnico)}</span>`;
+  maintenanceDeviceInfo.innerHTML = `Equipo: <b>${escapeHtml(d.fabricante)} ${escapeHtml(d.modelo)}</b><br><span style="color:var(--accent); font-weight:600; font-size:0.75rem;">Técnico en sesión: ${escapeHtml(nombreTecnico)}</span>`;
   maintenanceForm.reset();
-  maintenanceHistoryBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Cargando historial...</td></tr>`;
+  maintenanceHistoryBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Cargando historial...</td></tr>`;
   maintenanceModalOverlay.classList.add('active');
   
   try {
@@ -448,18 +439,18 @@ async function openMaintenanceModal(id) {
         const fecha = new Date(h.fecha).toLocaleString('es-ES');
         
         const solucionHtml = `
-          <div style="display:flex; align-items:center; gap:5px;">
-            <span style="font-size:0.75rem; color:${h.solucion ? 'var(--success)' : '#94a3b8'}; ${!h.solucion ? 'font-style:italic;' : ''}">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:0.75rem; color:${h.solucion ? 'var(--accent)' : 'var(--text-subtle)'}; ${!h.solucion ? 'font-style:italic;' : ''}">
               ${h.solucion ? escapeHtml(h.solucion) : 'Pendiente'}
             </span>
-            <button class="btn-agregar-solucion" data-id="${h.id}" data-solucion="${escapeHtml(h.solucion || '')}" style="background:none; border:none; cursor:pointer; font-size:1rem;" title="Modificar Solución">✏️</button>
+            <button class="btn-inline btn-agregar-solucion" data-id="${h.id}" data-solucion="${escapeHtml(h.solucion || '')}" title="Modificar Solución">✏️</button>
           </div>
         `;
           
         html += `
           <tr>
-            <td style="font-size:0.75rem;">${fecha}<br><span style="font-size:0.65rem; color:#64748b;">${h.tipo_mantenimiento || 'Falla'}</span></td>
-            <td style="font-size:0.75rem; font-weight:bold;">${escapeHtml(h.tecnico)}</td>
+            <td style="font-size:0.75rem;">${fecha}<br><span style="font-size:0.625rem; color:var(--text-subtle); text-transform:uppercase; letter-spacing:0.06em;">${h.tipo_mantenimiento || 'Falla'}</span></td>
+            <td style="font-size:0.75rem; font-weight:600;">${escapeHtml(h.tecnico)}</td>
             <td style="font-size:0.75rem; color:var(--danger);">${escapeHtml(h.falla)}</td>
             <td>${solucionHtml}</td>
           </tr>
@@ -670,7 +661,7 @@ function procesarFilas(filasCrudas) {
 function mostrarPrevisualizacion(resultados) {
   const validos = resultados.filter(r => r.valido).length;
   const invalidos = resultados.length - validos;
-  importSummary.innerHTML = `Se detectaron <b>${resultados.length}</b> fila(s): <span style="color:var(--success); font-weight:600;">${validos} válida(s)</span>${invalidos > 0 ? ` · <span style="color:var(--danger); font-weight:600;">${invalidos} con errores</span>` : ''}.`;
+  importSummary.innerHTML = `Se detectaron <b>${resultados.length}</b> fila(s): <span style="color:#2D5A3D; font-weight:600;">${validos} válida(s)</span>${invalidos > 0 ? ` · <span style="color:var(--danger); font-weight:600;">${invalidos} con errores</span>` : ''}.`;
   if (resultados.length === 0) {
     importPreviewBody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:2rem; color:var(--text-muted);">No se encontraron filas.</td></tr>`;
     confirmImportBtn.disabled = true;
@@ -684,19 +675,19 @@ function mostrarPrevisualizacion(resultados) {
     const d = r.dispositivo;
     const optionsHtml = estados.map(est => `<option value="${est}" ${est === d.estado ? 'selected' : ''}>${est}</option>`).join('');
     
-    html += `<tr style="${r.valido ? '' : 'background:#fff5f5;'}">
+    html += `<tr style="${r.valido ? '' : 'background:#FBF2F3;'}">
       <td>${r.numero}</td>
       <td>${escapeHtml(d.departamento)}</td>
       <td>${escapeHtml(d.usuario_responsable)}</td>
       <td>${escapeHtml(d.fabricante)}</td>
       <td>${escapeHtml(d.modelo)}</td>
       <td>${escapeHtml(d.tipo)}</td>
-      <td><select class="import-state-select" data-index="${r.numero - 1}" style="padding:0.4rem; border-radius:6px; border:1px solid #cbd5e1; font-size:0.8rem;">${optionsHtml}</select></td>
+      <td><select class="import-state-select" data-index="${r.numero - 1}" style="padding:0.35rem 0.5rem; border-radius:4px; border:1px solid var(--border-strong); font-size:0.75rem; font-family:var(--font-sans);">${optionsHtml}</select></td>
       <td>${escapeHtml(d.procesador)}</td>
       <td>${escapeHtml(d.nucleos)}</td>
       <td>${escapeHtml(d.frecuencia)}</td>
       <td>${escapeHtml(d.ram_total)}</td>
-      <td>${r.valido ? '<span class="import-ok">✔ OK</span>' : `<span class="import-error" title="${escapeHtml(r.errores.join(', '))}">✖ Error</span>`}</td>
+      <td>${r.valido ? '<span class="import-ok">✓ OK</span>' : `<span class="import-error" title="${escapeHtml(r.errores.join(', '))}">✕ Error</span>`}</td>
     </tr>`;
   });
   importPreviewBody.innerHTML = html;
@@ -786,7 +777,7 @@ async function confirmarImportacion() {
   importModalOverlay.classList.remove('active');
   importFileInput.value = '';
   importRows = [];
-  if (fail === 0) showToast(`✔ ${ok} equipos importados exitosamente`);
+  if (fail === 0) showToast(`✓ ${ok} equipos importados exitosamente`);
   else showToast(`Fallaron ${fail} equipos. Motivo: ${primerErrorMsg}`, true);
   await cargarDispositivos();
 }
@@ -843,7 +834,6 @@ function initEvents() {
   importModalOverlay.addEventListener('click', (e) => { if (e.target === importModalOverlay) { importModalOverlay.classList.remove('active'); importFileInput.value = ''; importRows = []; } });
   confirmImportBtn.addEventListener('click', confirmarImportacion);
 
-  // EVENTOS MODAL QR
   closeQrModalBtn.addEventListener('click', () => qrModalOverlay.classList.remove('active'));
   qrModalOverlay.addEventListener('click', (e) => { if (e.target === qrModalOverlay) qrModalOverlay.classList.remove('active'); });
   downloadQrBtn.addEventListener('click', () => {

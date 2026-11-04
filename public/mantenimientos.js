@@ -8,7 +8,7 @@ const filterMarca = document.getElementById('filterMarca');
 const toast = document.getElementById('toast');
 const deleteSelectedHistoryBtn = document.getElementById('deleteSelectedHistoryBtn');
 const selectAllHistory = document.getElementById('selectAllHistory');
-const exportMonthlyPdfBtn = document.getElementById('exportMonthlyPdfBtn'); // NUEVO
+const exportMonthlyPdfBtn = document.getElementById('exportMonthlyPdfBtn');
 
 function showToast(msg, isError = false) {
   toast.textContent = msg;
@@ -30,7 +30,7 @@ async function verificarAdmin() {
     const data = await res.json();
     if (data.autenticado && data.usuario.rol === 'admin') {
       isAdmin = true;
-      deleteSelectedHistoryBtn.style.display = 'flex';
+      deleteSelectedHistoryBtn.style.display = 'inline-flex';
     }
   } catch (e) {}
 }
@@ -85,11 +85,11 @@ function renderTabla() {
     const fecha = new Date(m.fecha).toLocaleString('es-ES');
     
     const solucionHtml = `
-      <div style="display:flex; align-items:center; gap:5px;">
-        <span style="color:${m.solucion ? 'var(--success)' : '#94a3b8'}; font-size:0.85rem; ${!m.solucion ? 'font-style:italic;' : ''}">
+      <div style="display:flex; align-items:center; gap:6px;">
+        <span style="color:${m.solucion ? 'var(--accent)' : 'var(--text-subtle)'}; font-size:0.8125rem; ${!m.solucion ? 'font-style:italic;' : ''}">
           ${m.solucion ? escapeHtml(m.solucion) : 'Pendiente por resolver'}
         </span>
-        <button class="btn-edit-solucion" data-id="${m.id}" data-solucion="${escapeHtml(m.solucion || '')}" style="background:none; border:none; cursor:pointer; font-size:1.1rem;" title="Modificar Solución">✏️</button>
+        <button class="btn-inline btn-edit-solucion" data-id="${m.id}" data-solucion="${escapeHtml(m.solucion || '')}" title="Modificar Solución">✏️</button>
       </div>
     `;
 
@@ -99,12 +99,12 @@ function renderTabla() {
 
     html += `
       <tr>
-        <td><input type="checkbox" class="history-checkbox" value="${m.id}" style="cursor: pointer; width: 16px; height: 16px;"></td>
-        <td style="font-size:0.85rem; color:#64748b;">${fecha}</td>
-        <td style="font-weight:600;">${escapeHtml(m.fabricante)} ${escapeHtml(m.modelo)} <br><span style="font-size:0.75rem;color:#94a3b8;">Serie: ${escapeHtml(m.serie || 'N/A')}</span></td>
-        <td><span class="badge badge-disponible">${escapeHtml(m.fabricante || '—')}</span></td>
+        <td><input type="checkbox" class="history-checkbox" value="${m.id}"></td>
+        <td style="font-size:0.75rem; color:var(--text-muted);">${fecha}</td>
+        <td style="font-weight:500;">${escapeHtml(m.fabricante)} ${escapeHtml(m.modelo)}<br><span style="font-size:0.6875rem;color:var(--text-subtle);">Serie: ${escapeHtml(m.serie || 'N/A')}</span></td>
+        <td>${escapeHtml(m.fabricante || '—')}</td>
         <td>${tipoBadge}</td>
-        <td style="color:var(--danger); font-size:0.9rem;">${escapeHtml(m.falla)}</td>
+        <td style="color:var(--danger); font-size:0.8125rem;">${escapeHtml(m.falla)}</td>
         <td>${solucionHtml}</td>
         <td style="font-weight:500;">${escapeHtml(m.tecnico)}</td>
       </tr>
@@ -177,7 +177,6 @@ deleteSelectedHistoryBtn.addEventListener('click', async () => {
   cargarMantenimientos();
 });
 
-// GENERAR REPORTE MENSUAL PDF
 exportMonthlyPdfBtn.addEventListener('click', () => {
   if (todosMantenimientos.length === 0) return showToast('No hay datos para exportar', true);
 
@@ -215,7 +214,7 @@ exportMonthlyPdfBtn.addEventListener('click', () => {
     head: [['Fecha', 'Equipo', 'Tipo', 'Falla / Componente', 'Solución', 'Técnico']],
     body: tableData,
     theme: 'striped',
-    headStyles: { fillColor: [30, 43, 60] },
+    headStyles: { fillColor: [31, 61, 43] },
     styles: { fontSize: 8 }
   });
 

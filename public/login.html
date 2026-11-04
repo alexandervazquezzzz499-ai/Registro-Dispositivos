@@ -4,26 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Iniciar sesión | Registro de Dispositivos</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Playfair+Display:wght@500;600;700&display=swap');
-  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Geist', -apple-system, sans-serif; }
-  body { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #F8F9FA; padding: 1.5rem; }
-  .login-card { background: #FFFFFF; border: 1px solid #E9ECEF; border-radius: 4px; padding: 2.5rem 2.25rem; max-width: 400px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.06); }
-  .login-icon { width: 56px; height: 56px; background: #1F3D2B; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1.5rem; }
-  h1 { text-align: center; color: #1A1A1A; font-family: 'Playfair Display', serif; font-size: 1.75rem; font-weight: 600; margin-bottom: 0.35rem; letter-spacing: -0.02em; }
-  .subtitle { text-align: center; color: #9CA3AF; font-size: 0.75rem; margin-bottom: 2rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 500; }
-  .form-group { margin-bottom: 1rem; }
-  label { display: block; margin-bottom: 6px; color: #6B7280; font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.06em; }
-  input { width: 100%; padding: 0.65rem 0.875rem; border: 1px solid #D1D5DB; border-radius: 4px; font-size: 0.9375rem; outline: none; transition: 0.15s; background: #FFFFFF; color: #1A1A1A; }
-  input:focus { border-color: #1A1A1A; box-shadow: 0 0 0 3px rgba(26,26,26,0.06); }
-  button { width: 100%; padding: 0.75rem; background: #1F3D2B; color: white; border: 1px solid #1F3D2B; border-radius: 4px; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: 0.15s; margin-top: 0.5rem; }
-  button:hover { background: #142A1E; border-color: #142A1E; }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
-  .error { background: #FBF2F3; color: #7A2E35; padding: 0.65rem 0.875rem; border-radius: 4px; font-size: 0.8125rem; margin-bottom: 1rem; display: none; border: 1px solid #E8D3D5; }
-  .error.show { display: block; }
-  .hint { text-align: center; margin-top: 1.5rem; font-size: 0.75rem; color: #9CA3AF; padding: 0.75rem; border: 1px dashed #E9ECEF; border-radius: 4px; }
-  .hint strong { color: #1F3D2B; font-weight: 600; }
-</style>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Playfair+Display:wght@500;600;700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Geist', -apple-system, sans-serif; }
+    body { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #F8F9FA; padding: 1.5rem; -webkit-font-smoothing: antialiased; }
+    .login-card { background: #FFFFFF; border: 1px solid #E9ECEF; border-radius: 4px; padding: 2.5rem 2.25rem; max-width: 400px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.06); }
+    .login-icon { width: 56px; height: 56px; background: #1F3D2B; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1.5rem; }
+    h1 { text-align: center; color: #1A1A1A; font-family: 'Playfair Display', serif; font-size: 1.75rem; font-weight: 600; margin-bottom: 0.35rem; letter-spacing: -0.02em; }
+    .subtitle { text-align: center; color: #9CA3AF; font-size: 0.6875rem; margin-bottom: 2rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; margin-bottom: 6px; color: #6B7280; font-weight: 600; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    input { width: 100%; padding: 0.65rem 0.875rem; border: 1px solid #D1D5DB; border-radius: 4px; font-size: 0.9375rem; outline: none; transition: 0.15s; background: #FFFFFF; color: #1A1A1A; font-family: 'Geist', sans-serif; }
+    input:focus { border-color: #1A1A1A; box-shadow: 0 0 0 3px rgba(26,26,26,0.06); }
+    button { width: 100%; padding: 0.75rem; background: #1F3D2B; color: white; border: 1px solid #1F3D2B; border-radius: 4px; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: 0.15s; margin-top: 0.5rem; font-family: 'Geist', sans-serif; }
+    button:hover { background: #142A1E; border-color: #142A1E; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .error { background: #FBF2F3; color: #7A2E35; padding: 0.65rem 0.875rem; border-radius: 4px; font-size: 0.8125rem; margin-bottom: 1rem; display: none; border: 1px solid #E8D3D5; }
+    .error.show { display: block; }
+    .hint { text-align: center; margin-top: 1.5rem; font-size: 0.75rem; color: #9CA3AF; padding: 0.75rem; border: 1px dashed #E9ECEF; border-radius: 4px; line-height: 1.5; }
+    .hint strong { color: #1F3D2B; font-weight: 600; }
+  </style>
 </head>
 <body>
   <div class="login-card">

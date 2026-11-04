@@ -13,7 +13,7 @@
     <div class="header">
       <h1><span>🛠️</span> Historial General de Mantenimientos</h1>
       <div class="user-area">
-        <button class="btn-primary" onclick="window.location.href='/'" style="background:#64748b; box-shadow:none;">⬅️ Volver al Inventario</button>
+        <button class="btn-secondary" onclick="window.location.href='/'">⬅️ Volver al Inventario</button>
       </div>
     </div>
 
@@ -27,12 +27,8 @@
         <select id="filterMarca">
           <option value="">Todas las marcas</option>
         </select>
-        
-        <button class="btn-primary" id="exportMonthlyPdfBtn" style="background:#d97706; box-shadow: 0 6px 16px rgba(217, 119, 6, 0.25);">
-          📄 Reporte Mensual PDF
-        </button>
-
-        <button class="btn-primary" id="deleteSelectedHistoryBtn" style="background:#dc2626; box-shadow: 0 6px 16px rgba(220, 38, 38, 0.25); display: none;">🗑️ Eliminar Seleccionados</button>
+        <button class="btn-secondary" id="exportMonthlyPdfBtn">📄 Reporte Mensual PDF</button>
+        <button class="btn-danger" id="deleteSelectedHistoryBtn" style="display: none;">🗑️ Eliminar Seleccionados</button>
       </div>
     </div>
 
@@ -40,7 +36,7 @@
       <table>
         <thead>
           <tr>
-            <th style="width: 40px;"><input type="checkbox" id="selectAllHistory" style="cursor: pointer; width: 16px; height: 16px;"></th>
+            <th style="width: 40px;"><input type="checkbox" id="selectAllHistory"></th>
             <th>FECHA</th>
             <th>EQUIPO</th>
             <th>MARCA</th>
@@ -53,12 +49,13 @@
         <tbody id="maintenanceTableBody"></tbody>
       </table>
       <div id="emptyMantenimiento" class="empty-state" style="display:none;">
-        <h3>No hay mantenimientos registrados.</h3>
+        <h3>No hay mantenimientos registrados</h3>
+        <p>Los mantenimientos aparecerán aquí cuando se reporten.</p>
       </div>
     </div>
   </div>
 
   <div class="toast" id="toast">Cargando...</div>
-  <script src="mantenimientos.js?v=7"></script>
+  <script src="mantenimientos.js?v=8"></script>
 </body>
 </html>
