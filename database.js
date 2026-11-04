@@ -1,6 +1,7 @@
 require('dotenv').config();
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const DB_NAME = process.env.DB_NAME || 'dispositivos_db';
 let pool = null;
@@ -66,6 +67,18 @@ async function initDB() {
   try {
     await pool.query(`ALTER TABLE dispositivos ADD COLUMN perifericos VARCHAR(255) DEFAULT ''`);
   } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
+
+  // AGREGAR NUEVA COLUMNA DE CODIGO QR
+  try {
+    await pool.query(`ALTER TABLE dispositivos ADD COLUMN qr_code VARCHAR(100) UNIQUE DEFAULT NULL`);
+  } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
+
+  // GENERAR QR PARA LOS EQUIPOS QUE YA EXISTEN Y NO TIENEN
+  const [equiposSinQr] = await pool.query('SELECT id FROM dispositivos WHERE qr_code IS NULL');
+  for (let equipo of equiposSinQr) {
+    const uuid = crypto.randomUUID();
+    await pool.query('UPDATE dispositivos SET qr_code = ? WHERE id = ?', [uuid, equipo.id]);
+  }
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS mantenimientos (

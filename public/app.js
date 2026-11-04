@@ -25,6 +25,7 @@ const importPreviewBody = document.getElementById('importPreviewBody');
 const importSummary = document.getElementById('importSummary');
 const cancelImportBtn = document.getElementById('cancelImportBtn');
 const confirmImportBtn = document.getElementById('confirmImportBtn');
+const globalImportState = document.getElementById('globalImportState');
 const maintenanceModalOverlay = document.getElementById('maintenanceModalOverlay');
 const maintenanceDeviceInfo = document.getElementById('maintenanceDeviceInfo');
 const maintenanceForm = document.getElementById('maintenanceForm');
@@ -45,6 +46,13 @@ const confirmMessage = document.getElementById('confirmMessage');
 const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
 const acceptConfirmBtn = document.getElementById('acceptConfirmBtn');
 
+// ELEMENTOS QR
+const qrModalOverlay = document.getElementById('qrModalOverlay');
+const qrDeviceInfo = document.getElementById('qrDeviceInfo');
+const qrcodeContainer = document.getElementById('qrcode');
+const closeQrModalBtn = document.getElementById('closeQrModalBtn');
+const downloadQrBtn = document.getElementById('downloadQrBtn');
+
 const fieldId = document.getElementById('deviceId');
 const fieldDepartamento = document.getElementById('departamento');
 const fieldUsuario = document.getElementById('usuario_responsable');
@@ -58,7 +66,7 @@ const fieldNucleos = document.getElementById('nucleos');
 const fieldFrecuencia = document.getElementById('frecuencia');
 const fieldRamTotal = document.getElementById('ram_total');
 const fieldDetallesRam = document.getElementById('detalles_ram');
-const fieldPerifericos = document.getElementById('perifericos'); // NUEVO
+const fieldPerifericos = document.getElementById('perifericos');
 
 const TIPOS_VALIDOS = ['Desktop', 'All In One', 'Portátil', 'Monitor', 'Impresora', 'Servidor', 'Otro'];
 
@@ -212,6 +220,20 @@ async function cargarDispositivos(silencioso = false) {
     if (silencioso && document.querySelector('.modal-overlay.active')) return; 
     devices = await apiFetch('/api/dispositivos');
     renderTable();
+    
+    // LÓGICA PARA ABRIR EL EQUIPO SI SE ESCANEÓ UN QR
+    const urlParams = new URLSearchParams(window.location.search);
+    const qrParam = urlParams.get('qr');
+    if (qrParam && !silencioso) {
+      const dev = devices.find(x => x.qr_code === qrParam);
+      if (dev) {
+        openMaintenanceModal(dev.id);
+        // Limpiar la URL para que no se vuelva a abrir si se recarga
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else {
+        showToast('Equipo no encontrado con ese QR', true);
+      }
+    }
   } catch (err) { 
     if (!silencioso) showToast(err.message, true); 
   }
@@ -226,7 +248,8 @@ function getFilteredDevices() {
                     (d.usuario_responsable && d.usuario_responsable.toLowerCase().includes(searchTerm)) ||
                     (d.modelo && d.modelo.toLowerCase().includes(searchTerm)) ||
                     (d.procesador && d.procesador.toLowerCase().includes(searchTerm)) ||
-                    (d.serie && d.serie.toLowerCase().includes(searchTerm));
+                    (d.serie && d.serie.toLowerCase().includes(searchTerm)) ||
+                    (d.qr_code && d.qr_code.toLowerCase().includes(searchTerm));
       if (!match) return false;
     }
     if (typeFilter && d.tipo !== typeFilter) return false;
@@ -256,6 +279,17 @@ function renderTable() {
       duenoMostrar = partes.slice(1).join(' - ').trim();
     }
 
+    const btnNota = d.estado === 'Disponible' 
+      ? `<button class="btn-icon print" data-id="${d.id}" title="Imprimir Nota de Entrega" style="color:#0e7b4c;">
+           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+         </button>` 
+      : '';
+
+    // BOTÓN DE QR
+    const btnQr = `<button class="btn-icon qr" data-id="${d.id}" title="Ver Código QR" style="color:#2a6df4;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+    </button>`;
+
     html += `
       <tr data-id="${d.id}">
         <td style="font-weight: 500;">${escapeHtml(d.fabricante || '—')} ${escapeHtml(d.modelo || '')}</td>
@@ -266,9 +300,8 @@ function renderTable() {
         <td>${getBadgeEstado(d.estado)}</td>
         <td>
           <div class="actions">
-            <button class="btn-icon print" data-id="${d.id}" title="Imprimir Acta de Entrega">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-            </button>
+            ${btnNota}
+            ${btnQr}
             <button class="btn-icon maintenance" data-id="${d.id}" title="Mantenimiento">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
             </button>
@@ -285,7 +318,8 @@ function renderTable() {
   });
   tableBody.innerHTML = html;
 
-  document.querySelectorAll('.btn-icon.print').forEach(btn => btn.addEventListener('click', (e) => generarActaEntregaPDF(e.currentTarget.dataset.id)));
+  document.querySelectorAll('.btn-icon.print').forEach(btn => btn.addEventListener('click', (e) => generarNotaEntregaPDF(e.currentTarget.dataset.id)));
+  document.querySelectorAll('.btn-icon.qr').forEach(btn => btn.addEventListener('click', (e) => mostrarQRModal(e.currentTarget.dataset.id)));
   document.querySelectorAll('.btn-icon.maintenance').forEach(btn => btn.addEventListener('click', (e) => openMaintenanceModal(e.currentTarget.dataset.id)));
   document.querySelectorAll('.btn-icon.edit').forEach(btn => btn.addEventListener('click', (e) => openEditModal(e.currentTarget.dataset.id)));
   document.querySelectorAll('.btn-icon.delete').forEach(btn => btn.addEventListener('click', (e) => {
@@ -296,20 +330,49 @@ function renderTable() {
   }));
 }
 
-async function generarActaEntregaPDF(id) {
+function mostrarQRModal(id) {
   const d = devices.find(x => String(x.id) === String(id));
   if (!d) return;
   
-  showToast('Generando PDF...');
+  qrDeviceInfo.textContent = `${d.fabricante} ${d.modelo} (S/N: ${d.serie || 'N/A'})`;
+  qrcodeContainer.innerHTML = ''; // Limpiar QR anterior
+  
+  // La URL a la que llevará el QR. Si estás en producción, usará tu dominio de Render.
+  // El parámetro ?qr=UUID abrirá automáticamente el modal de mantenimiento de ese equipo.
+  const qrUrl = `${window.location.origin}/?qr=${d.qr_code}`;
+  
+  new QRCode(qrcodeContainer, {
+    text: qrUrl,
+    width: 200,
+    height: 200,
+    colorDark : "#1e2b3c",
+    colorLight : "#ffffff",
+    correctLevel : QRCode.CorrectLevel.H
+  });
+  
+  qrModalOverlay.classList.add('active');
+}
+
+// GENERAR NOTA DE ENTREGA EN FORMATO CARTA
+async function generarNotaEntregaPDF(id) {
+  const d = devices.find(x => String(x.id) === String(id));
+  if (!d) return;
+  
+  if (d.estado !== 'Disponible') {
+    return showToast('Solo se pueden generar notas para equipos en estado DISPONIBLE', true);
+  }
+
+  showToast('Generando Nota de Entrega...');
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
+  
+  const doc = new jsPDF('p', 'mm', 'letter');
   
   let historial = [];
   try { historial = await apiFetch(`/api/dispositivos/${id}/mantenimientos`); } catch(e) {}
   const cambiosHardware = historial.filter(h => h.tipo_mantenimiento === 'Cambio de Hardware');
 
   doc.setFontSize(18);
-  doc.text('ACTA DE ENTREGA DE EQUIPO', 105, 20, null, null, 'center');
+  doc.text('NOTA DE ENTREGA DE EQUIPO', 108, 20, null, null, 'center');
   
   doc.setFontSize(10);
   doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 20, 30);
@@ -353,8 +416,8 @@ async function generarActaEntregaPDF(id) {
   doc.line(120, finalY, 190, finalY);
   doc.text('Firma del Usuario (Recibe)', 130, finalY + 5);
 
-  doc.save(`Acta_Entrega_${d.serie || d.id}.pdf`);
-  showToast('PDF generado exitosamente');
+  doc.save(`Nota_Entrega_${d.serie || d.id}.pdf`);
+  showToast('Nota de Entrega generada exitosamente');
 }
 
 async function eliminarDispositivo(id) {
@@ -588,10 +651,12 @@ function procesarFilas(filasCrudas) {
     let tipoExcel = String(datos.tipo || '').trim();
     let tipoCanon = TIPOS_VALIDOS.find(t => normalizar(t) === normalizar(tipoExcel));
     if (!tipoCanon) tipoCanon = 'Otro';
+    
     const dispositivo = {
       departamento: datos.departamento || '', usuario_responsable: datos.usuario_responsable || '',
       fabricante: datos.fabricante || '', modelo: datos.modelo || '', tipo: tipoCanon,
-      estado: datos.estado || 'Activo', serie: datos.serie || '',
+      estado: datos.estado || 'Disponible',
+      serie: datos.serie || '',
       procesador: datos.procesador || '', nucleos: datos.nucleos || '',
       frecuencia: datos.frecuencia || '', ram_total: datos.ram_total || '', detalles_ram: datos.detalles_ram || '',
       perifericos: datos.perifericos || ''
@@ -611,13 +676,37 @@ function mostrarPrevisualizacion(resultados) {
     confirmImportBtn.disabled = true;
     return;
   }
+
+  const estados = ['Activo', 'Mantenimiento', 'Disponible', 'Activo con fallas', 'Baja'];
+  
   let html = '';
   resultados.forEach(r => {
     const d = r.dispositivo;
-    html += `<tr style="${r.valido ? '' : 'background:#fff5f5;'}"><td>${r.numero}</td><td>${escapeHtml(d.departamento)}</td><td>${escapeHtml(d.usuario_responsable)}</td><td>${escapeHtml(d.fabricante)}</td><td>${escapeHtml(d.modelo)}</td><td>${escapeHtml(d.tipo)}</td><td>${escapeHtml(d.estado)}</td><td>${escapeHtml(d.procesador)}</td><td>${escapeHtml(d.nucleos)}</td><td>${escapeHtml(d.frecuencia)}</td><td>${escapeHtml(d.ram_total)}</td><td>${r.valido ? '<span class="import-ok">✔ OK</span>' : `<span class="import-error" title="${escapeHtml(r.errores.join(', '))}">✖ Error</span>`}</td></tr>`;
+    const optionsHtml = estados.map(est => `<option value="${est}" ${est === d.estado ? 'selected' : ''}>${est}</option>`).join('');
+    
+    html += `<tr style="${r.valido ? '' : 'background:#fff5f5;'}">
+      <td>${r.numero}</td>
+      <td>${escapeHtml(d.departamento)}</td>
+      <td>${escapeHtml(d.usuario_responsable)}</td>
+      <td>${escapeHtml(d.fabricante)}</td>
+      <td>${escapeHtml(d.modelo)}</td>
+      <td>${escapeHtml(d.tipo)}</td>
+      <td><select class="import-state-select" data-index="${r.numero - 1}" style="padding:0.4rem; border-radius:6px; border:1px solid #cbd5e1; font-size:0.8rem;">${optionsHtml}</select></td>
+      <td>${escapeHtml(d.procesador)}</td>
+      <td>${escapeHtml(d.nucleos)}</td>
+      <td>${escapeHtml(d.frecuencia)}</td>
+      <td>${escapeHtml(d.ram_total)}</td>
+      <td>${r.valido ? '<span class="import-ok">✔ OK</span>' : `<span class="import-error" title="${escapeHtml(r.errores.join(', '))}">✖ Error</span>`}</td>
+    </tr>`;
   });
   importPreviewBody.innerHTML = html;
   confirmImportBtn.disabled = validos === 0;
+
+  globalImportState.value = resultados[0].dispositivo.estado;
+  globalImportState.addEventListener('change', (e) => {
+    const selected = e.target.value;
+    document.querySelectorAll('.import-state-select').forEach(sel => sel.value = selected);
+  });
 }
 
 async function manejarArchivoSeleccionado(file) {
@@ -672,8 +761,18 @@ async function manejarArchivoSeleccionado(file) {
 async function confirmarImportacion() {
   const validas = importRows.filter(r => r.valido);
   if (validas.length === 0) return;
+  
   confirmImportBtn.disabled = true;
   confirmImportBtn.textContent = `Importando...`;
+  
+  const selects = document.querySelectorAll('.import-state-select');
+  selects.forEach(sel => {
+    const idx = parseInt(sel.dataset.index);
+    if(importRows[idx]) {
+      importRows[idx].dispositivo.estado = sel.value;
+    }
+  });
+
   let ok = 0, fail = 0, primerErrorMsg = '';
   for (let i = 0; i < validas.length; i++) {
     try {
@@ -743,6 +842,19 @@ function initEvents() {
   cancelImportBtn.addEventListener('click', () => { importModalOverlay.classList.remove('active'); importFileInput.value = ''; importRows = []; });
   importModalOverlay.addEventListener('click', (e) => { if (e.target === importModalOverlay) { importModalOverlay.classList.remove('active'); importFileInput.value = ''; importRows = []; } });
   confirmImportBtn.addEventListener('click', confirmarImportacion);
+
+  // EVENTOS MODAL QR
+  closeQrModalBtn.addEventListener('click', () => qrModalOverlay.classList.remove('active'));
+  qrModalOverlay.addEventListener('click', (e) => { if (e.target === qrModalOverlay) qrModalOverlay.classList.remove('active'); });
+  downloadQrBtn.addEventListener('click', () => {
+    const canvas = qrcodeContainer.querySelector('canvas');
+    if (canvas) {
+      const link = document.createElement('a');
+      link.download = `QR_${qrDeviceInfo.textContent.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+  });
   
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -752,6 +864,7 @@ function initEvents() {
       if (importModalOverlay.classList.contains('active')) { importModalOverlay.classList.remove('active'); importFileInput.value = ''; importRows = []; }
       if (maintenanceModalOverlay.classList.contains('active')) closeMaintenanceModal();
       if (confirmModalOverlay.classList.contains('active')) cerrarConfirmacion();
+      if (qrModalOverlay.classList.contains('active')) qrModalOverlay.classList.remove('active');
     }
   });
 }

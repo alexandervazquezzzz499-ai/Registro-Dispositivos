@@ -4,6 +4,7 @@ const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
 const path = require('path');
+const crypto = require('crypto'); // Para generar UUIDs
 const { initDB, getPool } = require('./database');
 
 const app = express();
@@ -124,10 +125,14 @@ app.post('/api/dispositivos', requireAuth, async (req, res) => {
     const { departamento, usuario_responsable, fabricante, modelo, tipo, estado, serie, procesador, nucleos, frecuencia, ram_total, detalles_ram, perifericos } = req.body;
     if (!departamento || !tipo) return res.status(400).json({ error: 'Departamento y Tipo son obligatorios.' });
     const pool = getPool();
+    
+    // GENERAR EL CÓDIGO QR ÚNICO E INMUTABLE
+    const qr_code = crypto.randomUUID();
+
     const [result] = await pool.execute(`
-      INSERT INTO dispositivos (departamento, usuario_responsable, fabricante, modelo, tipo, estado, serie, procesador, nucleos, frecuencia, ram_total, detalles_ram, perifericos, creado_por)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [departamento, usuario_responsable || '', fabricante || '', modelo || '', tipo, estado || 'Activo', serie || '', procesador || '', nucleos || '', frecuencia || '', ram_total || '', detalles_ram || '', perifericos || '', req.session.userId || null]);
+      INSERT INTO dispositivos (departamento, usuario_responsable, fabricante, modelo, tipo, estado, serie, procesador, nucleos, frecuencia, ram_total, detalles_ram, perifericos, creado_por, qr_code)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [departamento, usuario_responsable || '', fabricante || '', modelo || '', tipo, estado || 'Activo', serie || '', procesador || '', nucleos || '', frecuencia || '', ram_total || '', detalles_ram || '', perifericos || '', req.session.userId || null, qr_code]);
     res.json({ ok: true, id: result.insertId });
   } catch (err) { res.status(500).json({ error: 'Error BD: ' + err.message }); }
 });

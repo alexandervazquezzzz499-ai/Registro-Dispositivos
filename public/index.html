@@ -8,6 +8,8 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <!-- LIBRERIA PARA GENERAR QR -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
   <div class="app-container">
@@ -143,6 +145,20 @@
     </div>
   </div>
 
+  <!-- MODAL QR -->
+  <div class="modal-overlay" id="qrModalOverlay">
+    <div class="modal" style="max-width: 400px; text-align: center;">
+      <h2>📱 Código QR del Equipo</h2>
+      <p id="qrDeviceInfo" style="font-weight:bold; margin-bottom: 1rem; color:var(--primary);"></p>
+      <div id="qrcode" style="display:flex; justify-content:center; margin-bottom: 1.5rem;"></div>
+      <p style="font-size:0.8rem; color:#64748b; margin-bottom: 1rem;">Escanea este código con tu celular para abrir el equipo directamente.</p>
+      <div class="modal-actions" style="justify-content: center;">
+        <button type="button" class="btn-primary" id="downloadQrBtn" style="background:#d97706;">⬇️ Descargar Imagen</button>
+        <button type="button" class="btn-secondary" id="closeQrModalBtn">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL USUARIOS -->
   <div class="modal-overlay" id="usersModalOverlay">
     <div class="modal" style="max-width: 700px;">
@@ -208,10 +224,24 @@
   <div class="modal-overlay" id="importModalOverlay">
     <div class="modal" style="max-width: 1100px;">
       <h2>📥 Importar equipos</h2>
-      <p id="importSummary" style="color:#6b7280; font-size:0.85rem; margin-bottom:1rem;"></p>
+      
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; background:#f8fafc; padding:1rem; border-radius:12px; border:1px solid #e2e8f0;">
+        <p id="importSummary" style="color:#6b7280; font-size:0.85rem; margin:0;"></p>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <label style="font-size:0.85rem; font-weight:600;">Asignar estado a TODOS:</label>
+          <select id="globalImportState" style="padding:0.5rem 1rem; border-radius:8px; border:1px solid #cbd5e1; font-weight:600; color:#1e2b3c;">
+            <option value="Disponible" selected>Disponible (Para entrega)</option>
+            <option value="Activo">Activo</option>
+            <option value="Mantenimiento">Mantenimiento</option>
+            <option value="Activo con fallas">Activo con fallas</option>
+            <option value="Baja">Baja</option>
+          </select>
+        </div>
+      </div>
+
       <div class="import-preview-wrapper">
         <table class="import-preview">
-          <thead><tr><th>#</th><th>Departamento</th><th>Usuario</th><th>Fabricante</th><th>Modelo</th><th>Tipo</th><th>Estado</th><th>Procesador</th><th>Núcleos</th><th>Frecuencia</th><th>RAM</th><th>Válido</th></tr></thead>
+          <thead><tr><th>#</th><th>Departamento</th><th>Usuario</th><th>Fabricante</th><th>Modelo</th><th>Tipo</th><th>Estado (Editable 1x1)</th><th>Procesador</th><th>Núcleos</th><th>Frecuencia</th><th>RAM</th><th>Válido</th></tr></thead>
           <tbody id="importPreviewBody"></tbody>
         </table>
       </div>
@@ -251,6 +281,6 @@
   </div>
 
   <div class="toast" id="toast">Guardado</div>
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>
