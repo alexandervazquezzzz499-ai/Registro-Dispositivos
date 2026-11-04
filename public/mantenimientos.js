@@ -43,7 +43,7 @@ async function cargarMantenimientos() {
     const res = await fetch('/api/todos-mantenimientos', { cache: 'no-store' });
     if (res.status === 401) { window.location.href = '/login.html'; return; }
     todosMantenimientos = await res.json();
-    
+
     const marcasUnicas = [...new Set(todosMantenimientos.map(m => m.fabricante).filter(Boolean))].sort();
     const valActual = filterMarca.value;
     filterMarca.innerHTML = '<option value="">Todas las marcas</option>';
@@ -66,12 +66,12 @@ function renderTabla() {
   const marcaFiltro = filterMarca.value;
 
   const filtrados = todosMantenimientos.filter(m => {
-    const coincideTexto = !texto || 
+    const coincideTexto = !texto ||
       (m.falla && m.falla.toLowerCase().includes(texto)) ||
       (m.solucion && m.solucion.toLowerCase().includes(texto)) ||
       (m.tecnico && m.tecnico.toLowerCase().includes(texto)) ||
       (m.modelo && m.modelo.toLowerCase().includes(texto));
-      
+
     const coincideMarca = !marcaFiltro || m.fabricante === marcaFiltro;
     return coincideTexto && coincideMarca;
   });
@@ -86,18 +86,18 @@ function renderTabla() {
   let html = '';
   filtrados.forEach(m => {
     const fecha = new Date(m.fecha).toLocaleString('es-ES');
-    
+
     const solucionHtml = `
       <div style="display:flex; align-items:center; gap:6px;">
         <span style="color:${m.solucion ? 'var(--accent)' : 'var(--text-subtle)'}; font-size:0.8125rem; ${!m.solucion ? 'font-style:italic;' : ''}">
           ${m.solucion ? escapeHtml(m.solucion) : 'Pendiente por resolver'}
         </span>
-        <button class="btn-inline btn-edit-solucion" data-id="${m.id}" data-solucion="${escapeHtml(m.solucion || '')}" title="Modificar Solución">${SVG_PENCIL}</button>
+        <button class="btn-inline btn-edit-solucion" data-id="${m.id}" data-solucion="${escapeHtml(m.solucion || '')}" title="Modificar Solucion">${SVG_PENCIL}</button>
       </div>
     `;
 
-    const tipoBadge = m.tipo_mantenimiento === 'Cambio de Hardware' 
-      ? '<span class="badge badge-mantenimiento">Cambio HW</span>' 
+    const tipoBadge = m.tipo_mantenimiento === 'Cambio de Hardware'
+      ? '<span class="badge badge-mantenimiento">Cambio HW</span>'
       : '<span class="badge badge-falla">Falla</span>';
 
     html += `
@@ -119,12 +119,12 @@ function renderTabla() {
     btn.addEventListener('click', async (e) => {
       const id = e.currentTarget.dataset.id;
       const actual = e.currentTarget.dataset.solucion;
-      
-      const nueva = prompt('Modificar solución aplicada:', actual);
-      
+
+      const nueva = prompt('Modificar solucion aplicada:', actual);
+
       if (nueva !== null) {
         if (nueva.trim() === '') {
-          alert('La solución no puede estar vacía.');
+          alert('La solucion no puede estar vacia.');
           return;
         }
         try {
@@ -134,10 +134,10 @@ function renderTabla() {
             body: JSON.stringify({ solucion: nueva })
           });
           if (!res.ok) throw new Error();
-          showToast('Solución actualizada correctamente');
+          showToast('Solucion actualizada correctamente');
           cargarMantenimientos();
         } catch (error) {
-          showToast('Error al actualizar la solución', true);
+          showToast('Error al actualizar la solucion', true);
         }
       }
     });
@@ -155,7 +155,7 @@ deleteSelectedHistoryBtn.addEventListener('click', async () => {
     return showToast('Selecciona al menos un registro para eliminar', true);
   }
 
-  if (!confirm(`¿Estás seguro de eliminar ${checkboxes.length} mantenimiento(s)? Esta acción no se puede deshacer.`)) return;
+  if (!confirm(`Estas seguro de eliminar ${checkboxes.length} mantenimiento(s)? Esta accion no se puede deshacer.`)) return;
 
   deleteSelectedHistoryBtn.disabled = true;
   deleteSelectedHistoryBtn.textContent = 'Eliminando...';
@@ -185,11 +185,11 @@ exportMonthlyPdfBtn.addEventListener('click', () => {
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF('landscape');
-  
+
   const hoy = new Date();
   const mesActual = hoy.getMonth();
   const anioActual = hoy.getFullYear();
-  
+
   const mantMes = todosMantenimientos.filter(m => {
     const fechaM = new Date(m.fecha);
     return fechaM.getMonth() === mesActual && fechaM.getFullYear() === anioActual;
@@ -199,7 +199,7 @@ exportMonthlyPdfBtn.addEventListener('click', () => {
 
   doc.setFontSize(16);
   doc.text(`REPORTE DE MANTENIMIENTOS - ${hoy.toLocaleString('es-ES', { month: 'long', year: 'numeric' }).toUpperCase()}`, 14, 15);
-  
+
   doc.setFontSize(10);
   doc.text(`Total de registros este mes: ${mantMes.length}`, 14, 23);
 
@@ -214,10 +214,10 @@ exportMonthlyPdfBtn.addEventListener('click', () => {
 
   doc.autoTable({
     startY: 30,
-    head: [['Fecha', 'Equipo', 'Tipo', 'Falla / Componente', 'Solución', 'Técnico']],
+    head: [['Fecha', 'Equipo', 'Tipo', 'Falla / Componente', 'Solucion', 'Tecnico']],
     body: tableData,
     theme: 'striped',
-    headStyles: { fillColor: [31, 61, 43] },
+    headStyles: { fillColor: [13, 20, 36] },
     styles: { fontSize: 8 }
   });
 

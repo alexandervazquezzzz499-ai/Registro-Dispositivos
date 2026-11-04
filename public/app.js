@@ -59,7 +59,7 @@ const fieldFabricante = document.getElementById('fabricante');
 const fieldModelo = document.getElementById('modelo');
 const fieldTipo = document.getElementById('tipo');
 const fieldEstado = document.getElementById('estado');
-const fieldSerie = document.getElementById('serie'); 
+const fieldSerie = document.getElementById('serie');
 const fieldProcesador = document.getElementById('procesador');
 const fieldNucleos = document.getElementById('nucleos');
 const fieldFrecuencia = document.getElementById('frecuencia');
@@ -69,7 +69,7 @@ const fieldPerifericos = document.getElementById('perifericos');
 
 const TIPOS_VALIDOS = ['Desktop', 'All In One', 'Portátil', 'Monitor', 'Impresora', 'Servidor', 'Otro'];
 
-/* SVGs reutilizables */
+/* SVGs reutilizables (sin emojis en ningun lado) */
 const SVG_TRASH = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
 const SVG_PENCIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>';
 const SVG_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
@@ -116,12 +116,12 @@ function mapearColumna(col) {
   const mapa = {
     'departamento': 'departamento', 'depto': 'departamento', 'area': 'departamento',
     'usuario': 'usuario_responsable', 'responsable': 'usuario_responsable',
-    'fabricante': 'fabricante', 'marca': 'fabricante', 
-    'modelo': 'modelo', 
+    'fabricante': 'fabricante', 'marca': 'fabricante',
+    'modelo': 'modelo',
     'tipo': 'tipo', 'estado': 'estado',
     'serie': 'serie', 'serial': 'serie', 'n/serie': 'serie', 'n serie': 'serie',
     'procesador': 'procesador', 'cpu': 'procesador',
-    'nucleos/cpus': 'nucleos', 'nucleos': 'nucleos', 
+    'nucleos/cpus': 'nucleos', 'nucleos': 'nucleos',
     'frecuencia cpu': 'frecuencia', 'frecuencia': 'frecuencia',
     'ram capacidad total': 'ram_total', 'ram total': 'ram_total', 'ram': 'ram_total',
     'detalles ram / ranuras / velocidad': 'detalles_ram', 'detalles ram': 'detalles_ram', 'ram detalles': 'detalles_ram',
@@ -160,8 +160,8 @@ async function abrirModalUsuarios() {
     let html = '';
     users.forEach(u => {
       const fecha = new Date(u.creado_en).toLocaleDateString();
-      const btnEliminar = String(u.id) === String(currentUser.id) 
-        ? '<span style="color:var(--text-subtle); font-size:0.75rem;">Tú</span>' 
+      const btnEliminar = String(u.id) === String(currentUser.id)
+        ? '<span style="color:var(--text-subtle); font-size:0.75rem;">Tú</span>'
         : `<button class="btn-icon delete-user" data-id="${u.id}" data-nombre="${escapeHtml(u.nombre)}" title="Eliminar">${SVG_TRASH}</button>`;
 
       html += `
@@ -192,7 +192,7 @@ async function eliminarUsuario(id) {
   try {
     await apiFetch(`/api/usuarios/${id}`, { method: 'DELETE' });
     showToast('Usuario eliminado correctamente');
-    abrirModalUsuarios(); 
+    abrirModalUsuarios();
   } catch (err) { showToast(err.message, true); }
 }
 
@@ -200,7 +200,7 @@ async function handleNewUserSubmit(e) {
   e.preventDefault();
   const nombre = document.getElementById('newUserNombre').value.trim();
   const usuario = document.getElementById('newUserUsername').value.trim();
-  
+
   if (contieneGroserias(nombre) || contieneGroserias(usuario)) {
     return showToast('El nombre o usuario contiene palabras no permitidas.', true);
   }
@@ -220,10 +220,10 @@ async function handleNewUserSubmit(e) {
 
 async function cargarDispositivos(silencioso = false) {
   try {
-    if (silencioso && document.querySelector('.modal-overlay.active')) return; 
+    if (silencioso && document.querySelector('.modal-overlay.active')) return;
     devices = await apiFetch('/api/dispositivos');
     renderTable();
-    
+
     const urlParams = new URLSearchParams(window.location.search);
     const qrParam = urlParams.get('qr');
     if (qrParam && !silencioso) {
@@ -235,8 +235,8 @@ async function cargarDispositivos(silencioso = false) {
         showToast('Equipo no encontrado con ese QR', true);
       }
     }
-  } catch (err) { 
-    if (!silencioso) showToast(err.message, true); 
+  } catch (err) {
+    if (!silencioso) showToast(err.message, true);
   }
 }
 
@@ -273,17 +273,17 @@ function renderTable() {
   filtered.forEach(d => {
     let deptoMostrar = d.departamento || '—';
     let duenoMostrar = d.usuario_responsable || '—';
-    
+
     if (duenoMostrar === '—' && deptoMostrar.includes(' - ')) {
       const partes = deptoMostrar.split(' - ');
       deptoMostrar = partes[0].trim();
       duenoMostrar = partes.slice(1).join(' - ').trim();
     }
 
-    const btnNota = d.estado === 'Disponible' 
+    const btnNota = d.estado === 'Disponible'
       ? `<button class="btn-icon print" data-id="${d.id}" title="Imprimir Nota de Entrega">
            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-         </button>` 
+         </button>`
       : '';
 
     const btnQr = `<button class="btn-icon qr" data-id="${d.id}" title="Ver Código QR">
@@ -333,50 +333,50 @@ function renderTable() {
 function mostrarQRModal(id) {
   const d = devices.find(x => String(x.id) === String(id));
   if (!d) return;
-  
+
   qrDeviceInfo.textContent = `${d.fabricante} ${d.modelo} (S/N: ${d.serie || 'N/A'})`;
   qrcodeContainer.innerHTML = '';
-  
+
   const qrUrl = `${window.location.origin}/?qr=${d.qr_code}`;
-  
+
   new QRCode(qrcodeContainer, {
     text: qrUrl,
     width: 200,
     height: 200,
-    colorDark : "#1A1A1A",
+    colorDark : "#0A0E1A",
     colorLight : "#FFFFFF",
     correctLevel : QRCode.CorrectLevel.H
   });
-  
+
   qrModalOverlay.classList.add('active');
 }
 
 async function generarNotaEntregaPDF(id) {
   const d = devices.find(x => String(x.id) === String(id));
   if (!d) return;
-  
+
   if (d.estado !== 'Disponible') {
     return showToast('Solo se pueden generar notas para equipos en estado DISPONIBLE', true);
   }
 
   showToast('Generando Nota de Entrega...');
   const { jsPDF } = window.jspdf;
-  
+
   const doc = new jsPDF('p', 'mm', 'letter');
-  
+
   let historial = [];
   try { historial = await apiFetch(`/api/dispositivos/${id}/mantenimientos`); } catch(e) {}
   const cambiosHardware = historial.filter(h => h.tipo_mantenimiento === 'Cambio de Hardware');
 
   doc.setFontSize(18);
   doc.text('NOTA DE ENTREGA DE EQUIPO', 108, 20, null, null, 'center');
-  
+
   doc.setFontSize(10);
   doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 20, 30);
-  doc.text(`Técnico: ${currentUser ? currentUser.nombre : 'N/A'}`, 20, 35);
+  doc.text(`Tecnico: ${currentUser ? currentUser.nombre : 'N/A'}`, 20, 35);
 
   doc.setFontSize(12);
-  doc.text('Información del Equipo', 20, 50);
+  doc.text('Informacion del Equipo', 20, 50);
   doc.setFontSize(10);
   doc.text(`Tipo: ${d.tipo}`, 20, 58);
   doc.text(`Marca: ${d.fabricante}`, 20, 64);
@@ -385,9 +385,9 @@ async function generarNotaEntregaPDF(id) {
   doc.text(`Departamento: ${d.departamento}`, 120, 58);
   doc.text(`Asignado a: ${d.usuario_responsable || 'N/A'}`, 120, 64);
 
-  doc.text('Periféricos Entregados:', 20, 90);
+  doc.text('Perifericos Entregados:', 20, 90);
   doc.setFontSize(10);
-  doc.text(d.perifericos || 'No se registraron periféricos.', 20, 98);
+  doc.text(d.perifericos || 'No se registraron perifericos.', 20, 98);
 
   if (cambiosHardware.length > 0) {
     doc.text('Historial de Cambios de Hardware / Mejoras:', 20, 115);
@@ -402,14 +402,14 @@ async function generarNotaEntregaPDF(id) {
       head: [['Fecha', 'Componente Modificado/Agregado', 'Detalle/Notas']],
       body: tableData,
       theme: 'grid',
-      headStyles: { fillColor: [31, 61, 43] }
+      headStyles: { fillColor: [13, 20, 36] }
     });
   }
 
   const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 30 : 150;
   doc.line(20, finalY, 90, finalY);
-  doc.text('Firma del Técnico', 35, finalY + 5);
-  
+  doc.text('Firma del Tecnico', 35, finalY + 5);
+
   doc.line(120, finalY, 190, finalY);
   doc.text('Firma del Usuario (Recibe)', 130, finalY + 5);
 
@@ -430,11 +430,11 @@ async function openMaintenanceModal(id) {
   if (!d) return;
   currentMaintenanceDeviceId = id;
   const nombreTecnico = currentUser ? currentUser.nombre : 'Desconocido';
-  maintenanceDeviceInfo.innerHTML = `Equipo: <b>${escapeHtml(d.fabricante)} ${escapeHtml(d.modelo)}</b><br><span style="color:var(--accent); font-weight:600; font-size:0.75rem;">Técnico en sesión: ${escapeHtml(nombreTecnico)}</span>`;
+  maintenanceDeviceInfo.innerHTML = `Equipo: <b>${escapeHtml(d.fabricante)} ${escapeHtml(d.modelo)}</b><br><span style="color:var(--accent); font-weight:600; font-size:0.75rem;">Tecnico en sesion: ${escapeHtml(nombreTecnico)}</span>`;
   maintenanceForm.reset();
   maintenanceHistoryBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Cargando historial...</td></tr>`;
   maintenanceModalOverlay.classList.add('active');
-  
+
   try {
     const historial = await apiFetch(`/api/dispositivos/${id}/mantenimientos`);
     if (historial.length === 0) {
@@ -443,16 +443,16 @@ async function openMaintenanceModal(id) {
       let html = '';
       historial.forEach(h => {
         const fecha = new Date(h.fecha).toLocaleString('es-ES');
-        
+
         const solucionHtml = `
           <div style="display:flex; align-items:center; gap:6px;">
             <span style="font-size:0.75rem; color:${h.solucion ? 'var(--accent)' : 'var(--text-subtle)'}; ${!h.solucion ? 'font-style:italic;' : ''}">
               ${h.solucion ? escapeHtml(h.solucion) : 'Pendiente'}
             </span>
-            <button class="btn-inline btn-agregar-solucion" data-id="${h.id}" data-solucion="${escapeHtml(h.solucion || '')}" title="Modificar Solución">${SVG_PENCIL}</button>
+            <button class="btn-inline btn-agregar-solucion" data-id="${h.id}" data-solucion="${escapeHtml(h.solucion || '')}" title="Modificar Solucion">${SVG_PENCIL}</button>
           </div>
         `;
-          
+
         html += `
           <tr>
             <td style="font-size:0.75rem;">${fecha}<br><span style="font-size:0.625rem; color:var(--text-subtle); text-transform:uppercase; letter-spacing:0.06em;">${h.tipo_mantenimiento || 'Falla'}</span></td>
@@ -468,14 +468,14 @@ async function openMaintenanceModal(id) {
         btn.addEventListener('click', async (e) => {
           const mantId = e.currentTarget.dataset.id;
           const actual = e.currentTarget.dataset.solucion;
-          
-          const solucion = prompt('Escribe o modifica la solución aplicada:', actual);
-          
+
+          const solucion = prompt('Escribe o modifica la solucion aplicada:', actual);
+
           if (solucion !== null && solucion.trim() !== '') {
-            if (contieneGroserias(solucion)) return showToast('La solución contiene palabras no permitidas.', true);
+            if (contieneGroserias(solucion)) return showToast('La solucion contiene palabras no permitidas.', true);
             try {
               await apiFetch(`/api/mantenimientos/${mantId}/solucion`, { method: 'PUT', body: JSON.stringify({ solucion }) });
-              showToast('Solución guardada correctamente');
+              showToast('Solucion guardada correctamente');
               openMaintenanceModal(currentMaintenanceDeviceId);
             } catch (err) { showToast(err.message, true); }
           }
@@ -492,17 +492,17 @@ async function handleMaintenanceSubmit(e) {
   const falla = document.getElementById('falla').value.trim();
   const solucion = document.getElementById('solucion').value.trim();
   const tipo_mantenimiento = document.getElementById('tipo_mantenimiento').value;
-  
+
   if (!falla) return showToast('La falla o componente es obligatorio', true);
-  
+
   if (contieneGroserias(falla) || contieneGroserias(solucion)) {
     return showToast('El texto contiene palabras no permitidas.', true);
   }
 
   try {
-    await apiFetch(`/api/dispositivos/${currentMaintenanceDeviceId}/mantenimientos`, { 
-      method: 'POST', 
-      body: JSON.stringify({ falla, solucion, tipo_mantenimiento }) 
+    await apiFetch(`/api/dispositivos/${currentMaintenanceDeviceId}/mantenimientos`, {
+      method: 'POST',
+      body: JSON.stringify({ falla, solucion, tipo_mantenimiento })
     });
     showToast('Reporte guardado correctamente');
     openMaintenanceModal(currentMaintenanceDeviceId);
@@ -562,7 +562,7 @@ async function handleFormSubmit(e) {
     ram_total: fieldRamTotal.value.trim(), detalles_ram: fieldDetallesRam.value.trim(),
     perifericos: fieldPerifericos ? fieldPerifericos.value.trim() : ''
   };
-  
+
   if (!payload.departamento || !payload.tipo) return showToast('Departamento y Tipo son obligatorios', true);
 
   const camposAValidar = [payload.departamento, payload.usuario_responsable, payload.fabricante, payload.modelo, payload.procesador, payload.detalles_ram, payload.perifericos];
@@ -609,7 +609,7 @@ function exportarExcel() {
       </tr>
     `;
   });
-  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table { border-collapse: collapse; }</style></head><body><table><tr><td colspan="13" style="background:#1F3D2B; color:white; font-size:16px; font-weight:bold; padding:12px; text-align:center; border:1px solid #142A1E;">INVENTARIO GENERAL DE EQUIPOS DE CÓMPUTO Y HARDWARE</td></tr><tr><td colspan="13" style="background:#F0F4F0; color:#1A1A1A; font-size:10px; padding:6px; text-align:center; border:1px solid #D8E2D8;">Reporte generado el ${fecha.toLocaleDateString()} · Total equipos: ${filtered.length}</td></tr><tr><td colspan="13" style="height:8px;"></td></tr><tr>${headers.map(h => `<th style="background:#1F3D2B; color:white; font-size:11px; padding:8px; border:1px solid #142A1E; text-transform:uppercase;">${h}</th>`).join('')}</tr>${filasHtml}<tr><td colspan="13" style="height:10px;"></td></tr><tr><td colspan="13" style="background:#f2f2f2; color:#666; font-size:10px; padding:6px; text-align:center; border:1px solid #ccc;">TOTAL EQUIPOS REGISTRADOS: ${filtered.length}</td></tr></table></body></html>`;
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table { border-collapse: collapse; }</style></head><body><table><tr><td colspan="13" style="background:#0D1424; color:white; font-size:16px; font-weight:bold; padding:12px; text-align:center; border:1px solid #00E0FF;">INVENTARIO GENERAL DE EQUIPOS DE COMPUTO Y HARDWARE</td></tr><tr><td colspan="13" style="background:#E8ECF1; color:#1A1A1A; font-size:10px; padding:6px; text-align:center; border:1px solid #5A6478;">Reporte generado el ${fecha.toLocaleDateString()} - Total equipos: ${filtered.length}</td></tr><tr><td colspan="13" style="height:8px;"></td></tr><tr>${headers.map(h => `<th style="background:#0D1424; color:white; font-size:11px; padding:8px; border:1px solid #00E0FF; text-transform:uppercase;">${h}</th>`).join('')}</tr>${filasHtml}<tr><td colspan="13" style="height:10px;"></td></tr><tr><td colspan="13" style="background:#f2f2f2; color:#666; font-size:10px; padding:6px; text-align:center; border:1px solid #ccc;">TOTAL EQUIPOS REGISTRADOS: ${filtered.length}</td></tr></table></body></html>`;
   const blob = new Blob(['\ufeff', html], { type: 'application/vnd.ms-excel;charset=utf-8' });
   const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `inventario_${fecha.toISOString().slice(0, 10)}.xls`;
   link.click(); URL.revokeObjectURL(link.href); showToast(`Exportados ${filtered.length} equipos`);
@@ -648,7 +648,7 @@ function procesarFilas(filasCrudas) {
     let tipoExcel = String(datos.tipo || '').trim();
     let tipoCanon = TIPOS_VALIDOS.find(t => normalizar(t) === normalizar(tipoExcel));
     if (!tipoCanon) tipoCanon = 'Otro';
-    
+
     const dispositivo = {
       departamento: datos.departamento || '', usuario_responsable: datos.usuario_responsable || '',
       fabricante: datos.fabricante || '', modelo: datos.modelo || '', tipo: tipoCanon,
@@ -667,7 +667,7 @@ function procesarFilas(filasCrudas) {
 function mostrarPrevisualizacion(resultados) {
   const validos = resultados.filter(r => r.valido).length;
   const invalidos = resultados.length - validos;
-  importSummary.innerHTML = `Se detectaron <b>${resultados.length}</b> fila(s): <span style="color:#2D5A3D; font-weight:600;">${validos} válida(s)</span>${invalidos > 0 ? ` · <span style="color:var(--danger); font-weight:600;">${invalidos} con errores</span>` : ''}.`;
+  importSummary.innerHTML = `Se detectaron <b>${resultados.length}</b> fila(s): <span style="color:var(--success); font-weight:600;">${validos} valida(s)</span>${invalidos > 0 ? ` - <span style="color:var(--danger); font-weight:600;">${invalidos} con errores</span>` : ''}.`;
   if (resultados.length === 0) {
     importPreviewBody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:2rem; color:var(--text-muted);">No se encontraron filas.</td></tr>`;
     confirmImportBtn.disabled = true;
@@ -675,20 +675,20 @@ function mostrarPrevisualizacion(resultados) {
   }
 
   const estados = ['Activo', 'Mantenimiento', 'Disponible', 'Activo con fallas', 'Baja'];
-  
+
   let html = '';
   resultados.forEach(r => {
     const d = r.dispositivo;
     const optionsHtml = estados.map(est => `<option value="${est}" ${est === d.estado ? 'selected' : ''}>${est}</option>`).join('');
-    
-    html += `<tr style="${r.valido ? '' : 'background:#FBF2F3;'}">
+
+    html += `<tr style="${r.valido ? '' : 'background:rgba(244,63,94,0.08);'}">
       <td>${r.numero}</td>
       <td>${escapeHtml(d.departamento)}</td>
       <td>${escapeHtml(d.usuario_responsable)}</td>
       <td>${escapeHtml(d.fabricante)}</td>
       <td>${escapeHtml(d.modelo)}</td>
       <td>${escapeHtml(d.tipo)}</td>
-      <td><select class="import-state-select" data-index="${r.numero - 1}" style="padding:0.35rem 0.5rem; border-radius:4px; border:1px solid var(--border-strong); font-size:0.75rem; font-family:var(--font-sans);">${optionsHtml}</select></td>
+      <td><select class="import-state-select" data-index="${r.numero - 1}" style="padding:0.35rem 0.5rem; border-radius:4px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.25); color:var(--text); font-size:0.75rem; font-family:var(--font-sans);">${optionsHtml}</select></td>
       <td>${escapeHtml(d.procesador)}</td>
       <td>${escapeHtml(d.nucleos)}</td>
       <td>${escapeHtml(d.frecuencia)}</td>
@@ -715,7 +715,7 @@ async function manejarArchivoSeleccionado(file) {
       const texto = await file.text();
       filasCrudas = parsearCSV(texto);
     } else if (nombre.endsWith('.xlsx') || nombre.endsWith('.xls')) {
-      if (typeof XLSX === 'undefined') { showToast('Error: No se pudo cargar la librería para leer Excel.', true); return; }
+      if (typeof XLSX === 'undefined') { showToast('Error: No se pudo cargar la libreria para leer Excel.', true); return; }
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: 'array' });
       const hoja = workbook.Sheets[workbook.SheetNames[0]];
@@ -744,7 +744,7 @@ async function manejarArchivoSeleccionado(file) {
       showToast('Formato no soportado. Usa .xls, .xlsx o .csv', true); return;
     }
     filasCrudas = filasCrudas.filter(fila => Object.values(fila).some(v => String(v).trim() !== ''));
-    if (filasCrudas.length === 0) { showToast('El archivo está vacío.', true); return; }
+    if (filasCrudas.length === 0) { showToast('El archivo esta vacio.', true); return; }
     importRows = procesarFilas(filasCrudas);
     mostrarPrevisualizacion(importRows);
     importModalOverlay.classList.add('active');
@@ -758,10 +758,10 @@ async function manejarArchivoSeleccionado(file) {
 async function confirmarImportacion() {
   const validas = importRows.filter(r => r.valido);
   if (validas.length === 0) return;
-  
+
   confirmImportBtn.disabled = true;
   confirmImportBtn.textContent = `Importando...`;
-  
+
   const selects = document.querySelectorAll('.import-state-select');
   selects.forEach(sel => {
     const idx = parseInt(sel.dataset.index);
@@ -796,7 +796,7 @@ function initEvents() {
   deviceForm.addEventListener('submit', handleFormSubmit);
   searchInput.addEventListener('input', renderTable);
   filterType.addEventListener('change', renderTable);
-  
+
   manageUsersBtn.addEventListener('click', abrirModalUsuarios);
   closeUsersModalBtn.addEventListener('click', () => usersModalOverlay.classList.remove('active'));
   usersModalOverlay.addEventListener('click', (e) => { if (e.target === usersModalOverlay) usersModalOverlay.classList.remove('active'); });
@@ -809,7 +809,7 @@ function initEvents() {
   closeMaintenanceModalBtn.addEventListener('click', closeMaintenanceModal);
   maintenanceModalOverlay.addEventListener('click', (e) => { if (e.target === maintenanceModalOverlay) closeMaintenanceModal(); });
   maintenanceForm.addEventListener('submit', handleMaintenanceSubmit);
-  
+
   changePasswordBtn.addEventListener('click', () => { passwordForm.reset(); passwordModalOverlay.classList.add('active'); });
   closePasswordModalBtn.addEventListener('click', () => passwordModalOverlay.classList.remove('active'));
   passwordModalOverlay.addEventListener('click', (e) => { if (e.target === passwordModalOverlay) closePasswordModalBtn.click(); });
@@ -818,22 +818,22 @@ function initEvents() {
     const actual = document.getElementById('passActual').value;
     const nueva = document.getElementById('passNueva').value;
     const confirmar = document.getElementById('passConfirmar').value;
-    if (nueva !== confirmar) return showToast('Las contraseñas no coinciden', true);
-    if (nueva.length < 6) return showToast('Mínimo 6 caracteres', true);
+    if (nueva !== confirmar) return showToast('Las contrasenas no coinciden', true);
+    if (nueva.length < 6) return showToast('Minimo 6 caracteres', true);
     try {
       await apiFetch('/api/cambiar-password', { method: 'POST', body: JSON.stringify({ passwordActual: actual, passwordNueva: nueva }) });
-      showToast('Contraseña actualizada');
+      showToast('Contrasena actualizada');
       passwordModalOverlay.classList.remove('active');
     } catch (err) { showToast(err.message, true); }
   });
-  
+
   logoutBtn.addEventListener('click', () => {
-    mostrarConfirmacion('¿Estás seguro de que deseas cerrar sesión?', async () => {
+    mostrarConfirmacion('Estas seguro de que deseas cerrar sesion?', async () => {
       await fetch('/api/logout', { method: 'POST' });
       window.location.href = '/login.html';
     });
   });
-  
+
   importExcelBtn.addEventListener('click', () => importFileInput.click());
   importFileInput.addEventListener('change', (e) => manejarArchivoSeleccionado(e.target.files[0]));
   cancelImportBtn.addEventListener('click', () => { importModalOverlay.classList.remove('active'); importFileInput.value = ''; importRows = []; });
@@ -851,7 +851,7 @@ function initEvents() {
       link.click();
     }
   });
-  
+
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       if (modalOverlay.classList.contains('active')) closeModal();
@@ -875,7 +875,7 @@ function initEvents() {
     document.getElementById('userAvatar').textContent = currentUser.nombre.charAt(0).toUpperCase();
     if (currentUser.rol === 'admin') { manageUsersBtn.style.display = 'flex'; }
   } catch { window.location.href = '/login.html'; }
-  
+
   initEvents();
   await cargarDispositivos();
   setInterval(() => { cargarDispositivos(true); }, 10000);
