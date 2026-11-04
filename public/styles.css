@@ -47,7 +47,45 @@ body {
 
 .app-container { max-width: 1320px; width: 100%; }
 
-/* ========== NOTIFICACIONES ========== */
+/* ========== NOTIFICACIONES EMERGENTES ========== */
+.notif-popup-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.notif-popup {
+  background: rgba(20, 28, 46, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 1rem;
+  color: var(--text);
+  box-shadow: 0 10px 30px rgba(0,224,255,0.2);
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  width: 320px;
+  animation: slideInRight 0.3s ease forwards;
+  pointer-events: auto;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-10px); }
+}
+
+/* ========== CAMPANA ESQUINA ========== */
 .top-left-notifications {
   position: fixed;
   top: 20px;

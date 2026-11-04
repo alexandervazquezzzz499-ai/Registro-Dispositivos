@@ -2,7 +2,7 @@ let devices = [];
 let currentUser = null;
 let importRows = [];
 let currentMaintenanceDeviceId = null;
-let notificacionesPrevias = []; // Para no repetir toasts
+let lastNotifTime = 0; // Control para las ventanas emergentes
 
 const PALABRAS_GROSERAS = ['mierda', 'pendejo', 'cabron', 'cabrón', 'verga', 'coño', 'joder', 'estupido', 'estúpido', 'idiota', 'culero', 'marico', 'maricón', 'zorra', 'perra', 'gonorrea', 'malparido', 'hijueputa', 'imbecil', 'imbécil'];
 
@@ -60,6 +60,7 @@ const notifBadge = document.getElementById('notifBadge');
 const notifDropdown = document.getElementById('notifDropdown');
 const notifList = document.getElementById('notifList');
 const closeNotifBtn = document.getElementById('closeNotifBtn');
+const notifPopupContainer = document.getElementById('notifPopupContainer');
 
 const qrModalOverlay = document.getElementById('qrModalOverlay');
 const qrDeviceInfo = document.getElementById('qrDeviceInfo');
@@ -169,12 +170,11 @@ function mostrarConfirmacion(mensaje, callbackAceptar, esEliminar = false) {
 
 function cerrarConfirmacion() { confirmModalOverlay.classList.remove('active'); }
 
-// NOTIFICACIONES
-async function cargarNotificaciones() {
+// LÓGICA DE NOTIFICACIONES
+async function cargarNotificaciones(isInitial = false) {
   try {
     const notifs = await apiFetch('/api/notificaciones');
     
-    // Mostrar en el dropdown
     if (notifs.length === 0) {
       notifList.innerHTML = `<div style="padding:1rem; text-align:center; color:var(--text-subtle); font-size:0.8125rem;">No hay notificaciones recientes</div>`;
       notifBadge.style.display = 'none';
@@ -197,20 +197,43 @@ async function cargarNotificaciones() {
         `;
       });
       notifList.innerHTML = html;
-    }
 
-    // Opcional: Lanzar toast si hay una nueva notificacion (comparando con el estado anterior)
-    if (notificacionesPrevias.length > 0 && notifs.length > 0) {
-      if (notifs[0].date !== notificacionesPrevias[0].date) {
-        showToast('Tienes una nueva notificacion', false);
+      const latestDate = new Date(notifs[0].date).getTime();
+      if (isInitial) {
+        lastNotifTime = latestDate;
+      } else if (latestDate > lastNotifTime) {
+        showNotifPopup(notifs[0]);
+        lastNotifTime = latestDate;
       }
     }
-    notificacionesPrevias = notifs;
-    
   } catch (err) { console.error('Error al cargar notificaciones', err); }
 }
 
-// USUARIOS Y CONFIGURACION
+function showNotifPopup(notif) {
+  if (!notifPopupContainer) return;
+  
+  const div = document.createElement('div');
+  div.className = 'notif-popup';
+  
+  const isReport = notif.type === 'reporte';
+  div.innerHTML = `
+    <div class="notif-icon ${isReport ? 'report' : 'update'}">${isReport ? SVG_TOOL : SVG_REFRESH}</div>
+    <div class="notif-content">
+      <div class="notif-title">${escapeHtml(notif.title)}</div>
+      <div class="notif-desc">${escapeHtml(notif.desc)}</div>
+      <span class="notif-time">Justo ahora</span>
+    </div>
+  `;
+  
+  notifPopupContainer.appendChild(div);
+  
+  // La ventana emergente dura 5 segundos en pantalla
+  setTimeout(() => {
+    div.style.animation = 'fadeOut 0.3s ease forwards';
+    setTimeout(() => div.remove(), 300);
+  }, 5000);
+}
+
 async function abrirModalUsuarios() {
   usersModalOverlay.classList.add('active');
   usersTableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Cargando usuarios...</td></tr>`;
@@ -223,12 +246,15 @@ async function abrirModalUsuarios() {
         ? '<span style="color:var(--text-subtle); font-size:0.75rem;">Tú</span>'
         : `<button class="btn-icon delete-user" data-id="${u.id}" data-nombre="${escapeHtml(u.nombre)}" title="Eliminar">${SVG_TRASH}</button>`;
 
+      // CAMBIO VISUAL: El rol "usuario" ahora se muestra como "Técnico"
+      const rolLabel = u.rol === 'admin' ? '<span class="badge badge-asignado">Admin</span>' : '<span class="badge badge-activo">Técnico</span>';
+
       html += `
         <tr>
           <td>${u.id}</td>
           <td style="font-weight:600;">${escapeHtml(u.usuario)}</td>
           <td>${escapeHtml(u.nombre)}</td>
-          <td>${u.rol === 'admin' ? '<span class="badge badge-asignado">Admin</span>' : '<span class="badge badge-activo">Usuario</span>'}</td>
+          <td>${rolLabel}</td>
           <td style="color:var(--text-subtle);">${fecha}</td>
           <td>${btnEliminar}</td>
         </tr>
@@ -931,9 +957,12 @@ function initEvents() {
     const data = await fetch('/api/session').then(r => r.json());
     if (!data.autenticado) { window.location.href = '/login.html'; return; }
     currentUser = data.usuario;
+    
+    // CAMBIO VISUAL EN EL HEADER: "Técnico" en vez de "usuario"
     document.getElementById('userName').textContent = currentUser.nombre;
-    document.getElementById('userRole').textContent = currentUser.rol;
+    document.getElementById('userRole').textContent = currentUser.rol === 'usuario' ? 'Técnico' : 'Administrador';
     document.getElementById('userAvatar').textContent = currentUser.nombre.charAt(0).toUpperCase();
+    
     if (currentUser.rol === 'admin') { 
       manageUsersBtn.style.display = 'flex';
       configBtn.style.display = 'flex'; 
@@ -942,11 +971,14 @@ function initEvents() {
 
   initEvents();
   await cargarDispositivos();
-  await cargarNotificaciones();
+  await cargarNotificaciones(true); // Carga inicial silenciosa
   
-  // Polling de actualizacion cada 10 segundos
   setInterval(() => { 
     cargarDispositivos(true); 
-    cargarNotificaciones();
   }, 10000);
+  
+  // Polling rápido (cada 5 segundos) para notificaciones "en tiempo real"
+  setInterval(() => {
+    cargarNotificaciones();
+  }, 5000);
 })();
