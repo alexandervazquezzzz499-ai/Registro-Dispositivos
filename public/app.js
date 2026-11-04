@@ -69,6 +69,12 @@ const fieldPerifericos = document.getElementById('perifericos');
 
 const TIPOS_VALIDOS = ['Desktop', 'All In One', 'Portátil', 'Monitor', 'Impresora', 'Servidor', 'Otro'];
 
+/* SVGs reutilizables */
+const SVG_TRASH = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
+const SVG_PENCIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>';
+const SVG_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+const SVG_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+
 function showToast(message, isError = false) {
   toast.textContent = message;
   toast.classList.toggle('error', isError);
@@ -156,7 +162,7 @@ async function abrirModalUsuarios() {
       const fecha = new Date(u.creado_en).toLocaleDateString();
       const btnEliminar = String(u.id) === String(currentUser.id) 
         ? '<span style="color:var(--text-subtle); font-size:0.75rem;">Tú</span>' 
-        : `<button class="btn-icon delete-user" data-id="${u.id}" data-nombre="${escapeHtml(u.nombre)}" title="Eliminar">🗑️</button>`;
+        : `<button class="btn-icon delete-user" data-id="${u.id}" data-nombre="${escapeHtml(u.nombre)}" title="Eliminar">${SVG_TRASH}</button>`;
 
       html += `
         <tr>
@@ -303,7 +309,7 @@ function renderTable() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
             </button>
             <button class="btn-icon delete" data-id="${d.id}" title="Eliminar">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              ${SVG_TRASH}
             </button>
           </div>
         </td>
@@ -443,7 +449,7 @@ async function openMaintenanceModal(id) {
             <span style="font-size:0.75rem; color:${h.solucion ? 'var(--accent)' : 'var(--text-subtle)'}; ${!h.solucion ? 'font-style:italic;' : ''}">
               ${h.solucion ? escapeHtml(h.solucion) : 'Pendiente'}
             </span>
-            <button class="btn-inline btn-agregar-solucion" data-id="${h.id}" data-solucion="${escapeHtml(h.solucion || '')}" title="Modificar Solución">✏️</button>
+            <button class="btn-inline btn-agregar-solucion" data-id="${h.id}" data-solucion="${escapeHtml(h.solucion || '')}" title="Modificar Solución">${SVG_PENCIL}</button>
           </div>
         `;
           
@@ -603,7 +609,7 @@ function exportarExcel() {
       </tr>
     `;
   });
-  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table { border-collapse: collapse; }</style></head><body><table><tr><td colspan="13" style="background:#1f4e78; color:white; font-size:16px; font-weight:bold; padding:12px; text-align:center; border:1px solid #143454;">INVENTARIO GENERAL DE EQUIPOS DE CÓMPUTO Y HARDWARE</td></tr><tr><td colspan="13" style="background:#ddebf7; color:#1e2b3c; font-size:10px; padding:6px; text-align:center; border:1px solid #b4c6e7;">Reporte generado el ${fecha.toLocaleDateString()} · Total equipos: ${filtered.length}</td></tr><tr><td colspan="13" style="height:8px;"></td></tr><tr>${headers.map(h => `<th style="background:#1f4e78; color:white; font-size:11px; padding:8px; border:1px solid #143454; text-transform:uppercase;">${h}</th>`).join('')}</tr>${filasHtml}<tr><td colspan="13" style="height:10px;"></td></tr><tr><td colspan="13" style="background:#f2f2f2; color:#666; font-size:10px; padding:6px; text-align:center; border:1px solid #ccc;">TOTAL EQUIPOS REGISTRADOS: ${filtered.length}</td></tr></table></body></html>`;
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table { border-collapse: collapse; }</style></head><body><table><tr><td colspan="13" style="background:#1F3D2B; color:white; font-size:16px; font-weight:bold; padding:12px; text-align:center; border:1px solid #142A1E;">INVENTARIO GENERAL DE EQUIPOS DE CÓMPUTO Y HARDWARE</td></tr><tr><td colspan="13" style="background:#F0F4F0; color:#1A1A1A; font-size:10px; padding:6px; text-align:center; border:1px solid #D8E2D8;">Reporte generado el ${fecha.toLocaleDateString()} · Total equipos: ${filtered.length}</td></tr><tr><td colspan="13" style="height:8px;"></td></tr><tr>${headers.map(h => `<th style="background:#1F3D2B; color:white; font-size:11px; padding:8px; border:1px solid #142A1E; text-transform:uppercase;">${h}</th>`).join('')}</tr>${filasHtml}<tr><td colspan="13" style="height:10px;"></td></tr><tr><td colspan="13" style="background:#f2f2f2; color:#666; font-size:10px; padding:6px; text-align:center; border:1px solid #ccc;">TOTAL EQUIPOS REGISTRADOS: ${filtered.length}</td></tr></table></body></html>`;
   const blob = new Blob(['\ufeff', html], { type: 'application/vnd.ms-excel;charset=utf-8' });
   const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `inventario_${fecha.toISOString().slice(0, 10)}.xls`;
   link.click(); URL.revokeObjectURL(link.href); showToast(`Exportados ${filtered.length} equipos`);
@@ -687,7 +693,7 @@ function mostrarPrevisualizacion(resultados) {
       <td>${escapeHtml(d.nucleos)}</td>
       <td>${escapeHtml(d.frecuencia)}</td>
       <td>${escapeHtml(d.ram_total)}</td>
-      <td>${r.valido ? '<span class="import-ok">✓ OK</span>' : `<span class="import-error" title="${escapeHtml(r.errores.join(', '))}">✕ Error</span>`}</td>
+      <td>${r.valido ? `<span class="import-ok">${SVG_CHECK}OK</span>` : `<span class="import-error" title="${escapeHtml(r.errores.join(', '))}">${SVG_X}Error</span>`}</td>
     </tr>`;
   });
   importPreviewBody.innerHTML = html;
@@ -777,7 +783,7 @@ async function confirmarImportacion() {
   importModalOverlay.classList.remove('active');
   importFileInput.value = '';
   importRows = [];
-  if (fail === 0) showToast(`✓ ${ok} equipos importados exitosamente`);
+  if (fail === 0) showToast(`${ok} equipos importados exitosamente`);
   else showToast(`Fallaron ${fail} equipos. Motivo: ${primerErrorMsg}`, true);
   await cargarDispositivos();
 }

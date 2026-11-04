@@ -10,6 +10,9 @@ const deleteSelectedHistoryBtn = document.getElementById('deleteSelectedHistoryB
 const selectAllHistory = document.getElementById('selectAllHistory');
 const exportMonthlyPdfBtn = document.getElementById('exportMonthlyPdfBtn');
 
+const SVG_PENCIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>';
+const SVG_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
+
 function showToast(msg, isError = false) {
   toast.textContent = msg;
   toast.classList.toggle('error', isError);
@@ -89,7 +92,7 @@ function renderTabla() {
         <span style="color:${m.solucion ? 'var(--accent)' : 'var(--text-subtle)'}; font-size:0.8125rem; ${!m.solucion ? 'font-style:italic;' : ''}">
           ${m.solucion ? escapeHtml(m.solucion) : 'Pendiente por resolver'}
         </span>
-        <button class="btn-inline btn-edit-solucion" data-id="${m.id}" data-solucion="${escapeHtml(m.solucion || '')}" title="Modificar Solución">✏️</button>
+        <button class="btn-inline btn-edit-solucion" data-id="${m.id}" data-solucion="${escapeHtml(m.solucion || '')}" title="Modificar Solución">${SVG_PENCIL}</button>
       </div>
     `;
 
@@ -166,7 +169,7 @@ deleteSelectedHistoryBtn.addEventListener('click', async () => {
   }
 
   deleteSelectedHistoryBtn.disabled = false;
-  deleteSelectedHistoryBtn.innerHTML = '🗑️ Eliminar Seleccionados';
+  deleteSelectedHistoryBtn.innerHTML = `${SVG_TRASH}Eliminar Seleccionados`;
   selectAllHistory.checked = false;
 
   if (errores > 0) {
