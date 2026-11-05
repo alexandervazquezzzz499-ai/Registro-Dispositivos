@@ -386,7 +386,6 @@ function renderTable() {
       ? `<button class="btn-icon maintenance" data-id="${d.id}" title="Mantenimiento"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg></button>`
       : `<button class="btn-icon unblock" data-id="${d.id}" title="Desbloquear Equipo" style="color:#F43F5E;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg></button>`;
 
-    // AQUÍ SE INTERCAMBIÓ EL ORDEN (Edit va antes que Maintenance)
     html += `
       <tr data-id="${d.id}">
         <td style="font-weight: 500;">${escapeHtml(d.fabricante || '—')} ${escapeHtml(d.modelo || '')}</td>
@@ -411,7 +410,9 @@ function renderTable() {
 
   document.querySelectorAll('.btn-icon.print').forEach(btn => btn.addEventListener('click', (e) => generarNotaEntregaPDF(e.currentTarget.dataset.id)));
   document.querySelectorAll('.btn-icon.qr').forEach(btn => btn.addEventListener('click', (e) => mostrarQRModal(e.currentTarget.dataset.id)));
-  document.querySelectorAll('.btn-icon.maintenance').forEach(btn => btn.addEventListener('click', (e) => openMaintenanceModal(e.currentTarget.dataset.id)));
+  
+  // AQUÍ ESTÁ EL INTERCAMBIO DE FUNCIONES
+  document.querySelectorAll('.btn-icon.maintenance').forEach(btn => btn.addEventListener('click', (e) => openEditModal(e.currentTarget.dataset.id))); // La llave ahora Edita
   document.querySelectorAll('.btn-icon.unblock').forEach(btn => btn.addEventListener('click', async (e) => {
     const id = e.currentTarget.dataset.id;
     mostrarConfirmacion('¿Desbloquear este equipo y reactivar su contador de inactividad?', async () => {
@@ -422,7 +423,8 @@ function renderTable() {
       } catch (err) { showToast(err.message, true); }
     });
   }));
-  document.querySelectorAll('.btn-icon.edit').forEach(btn => btn.addEventListener('click', (e) => openEditModal(e.currentTarget.dataset.id)));
+  document.querySelectorAll('.btn-icon.edit').forEach(btn => btn.addEventListener('click', (e) => openMaintenanceModal(e.currentTarget.dataset.id))); // El lápiz ahora Mantenimiento
+  
   document.querySelectorAll('.btn-icon.delete').forEach(btn => btn.addEventListener('click', (e) => {
     const id = e.currentTarget.dataset.id;
     const d = devices.find(x => String(x.id) === String(id));
