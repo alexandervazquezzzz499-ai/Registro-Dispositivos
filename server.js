@@ -59,7 +59,6 @@ async function verificarInactividad() {
       SET estado = 'Bloqueado' 
       WHERE actualizado_en < ? AND estado NOT IN ('Baja', 'Bloqueado')
     `, [fechaLimite]);
-    console.log(`[CRON] Verificacion de inactividad completada. Fecha limite: ${fechaLimite}`);
   } catch (err) {
     console.error('Error en verificacion de inactividad:', err);
   }
@@ -94,25 +93,47 @@ app.get('/api/session', (req, res) => {
   res.json({ autenticado: false });
 });
 
-// NOTIFICACIONES
+// NOTIFICACIONES (ACTUALIZADO CON GARANTIAS)
 app.get('/api/notificaciones', requireAuth, async (req, res) => {
   try {
     const pool = getPool();
+    
+    // 1. Reportes recientes
     const [reports] = await pool.query(`
       SELECT m.id, m.falla, m.tecnico, m.fecha, d.fabricante, d.modelo, d.id as dev_id
       FROM mantenimientos m JOIN dispositivos d ON m.dispositivo_id = d.id
-      ORDER BY m.fecha DESC LIMIT 5
+      ORDER BY m.fecha DESC LIMIT 3
     `);
+
+    // 2. Cambios de estado recientes
     const [updates] = await pool.query(`
       SELECT id as dev_id, fabricante, modelo, estado, actualizado_en
       FROM dispositivos
-      WHERE actualizado_en >= NOW() - INTERVAL 2 DAY AND estado != 'Bloqueado'
-      ORDER BY actualizado_en DESC LIMIT 5
+      WHERE actualizado_en >= NOW() - INTERVAL 1 DAY AND estado != 'Bloqueado'
+      ORDER BY actualizado_en DESC LIMIT 3
+    `);
+
+    // 3. Garantías por vencer (en los próximos 30 días)
+    const [warranties] = await pool.query(`
+      SELECT id as dev_id, fabricante, modelo, fecha_compra, meses_garantia,
+             DATE_ADD(fecha_compra, INTERVAL meses_garantia MONTH) as fecha_vencimiento
+      FROM dispositivos
+      WHERE fecha_compra IS NOT NULL AND meses_garantia > 0
+        AND DATE_ADD(fecha_compra, INTERVAL meses_garantia MONTH) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
     `);
     
     const notifs = [
-      ...reports.map(r => ({ type: 'reporte', title: `Nuevo reporte: ${r.fabricante} ${r.modelo}`, desc: r.falla, date: r.fecha, icon: 'tool' })),
-      ...updates.map(u => ({ type: 'estado', title: `Estado actualizado: ${u.fabricante} ${u.modelo}`, desc: `Nuevo estado: ${u.estado}`, date: u.actualizado_en, icon: 'refresh' }))
+      ...reports.map(r => ({ type: 'reporte', title: `Nuevo reporte: ${r.fabricante} ${r.modelo}`, desc: r.falla, date: r.fecha })),
+      ...updates.map(u => ({ type: 'estado', title: `Estado actualizado: ${u.fabricante} ${u.modelo}`, desc: `Nuevo estado: ${u.estado}`, date: u.actualizado_en })),
+      ...warranties.map(w => {
+        const diasRestantes = Math.ceil((new Date(w.fecha_vencimiento) - new Date()) / (1000 * 60 * 60 * 24));
+        return { 
+          type: 'garantia', 
+          title: `Garantía por vencer: ${w.fabricante} ${w.modelo}`, 
+          desc: `Vence en ${diasRestantes} días (${new Date(w.fecha_vencimiento).toLocaleDateString()})`, 
+          date: new Date() // Para que salga arriba
+        };
+      })
     ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
     
     res.json(notifs);
@@ -237,14 +258,14 @@ app.get('/api/dispositivos', requireAuth, async (req, res) => {
 
 app.post('/api/dispositivos', requireAuth, async (req, res) => {
   try {
-    const { departamento, usuario_responsable, fabricante, modelo, tipo, estado, serie, procesador, nucleos, frecuencia, ram_total, detalles_ram, perifericos } = req.body;
+    const { departamento, usuario_responsable, fabricante, modelo, tipo, estado, serie, procesador, nucleos, frecuencia, ram_total, detalles_ram, perifericos, fecha_compra, meses_garantia } = req.body;
     if (!departamento || !tipo) return res.status(400).json({ error: 'Departamento y Tipo son obligatorios.' });
     const pool = getPool();
     const qr_code = crypto.randomUUID();
     const [result] = await pool.execute(`
-      INSERT INTO dispositivos (departamento, usuario_responsable, fabricante, modelo, tipo, estado, serie, procesador, nucleos, frecuencia, ram_total, detalles_ram, perifericos, creado_por, qr_code)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [departamento, usuario_responsable || '', fabricante || '', modelo || '', tipo, estado || 'Activo', serie || '', procesador || '', nucleos || '', frecuencia || '', ram_total || '', detalles_ram || '', perifericos || '', req.session.userId || null, qr_code]);
+      INSERT INTO dispositivos (departamento, usuario_responsable, fabricante, modelo, tipo, estado, serie, procesador, nucleos, frecuencia, ram_total, detalles_ram, perifericos, creado_por, qr_code, fecha_compra, meses_garantia)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [departamento, usuario_responsable || '', fabricante || '', modelo || '', tipo, estado || 'Activo', serie || '', procesador || '', nucleos || '', frecuencia || '', ram_total || '', detalles_ram || '', perifericos || '', req.session.userId || null, qr_code, fecha_compra || null, meses_garantia || 0]);
     res.json({ ok: true, id: result.insertId });
   } catch (err) { res.status(500).json({ error: 'Error BD: ' + err.message }); }
 });
@@ -252,11 +273,11 @@ app.post('/api/dispositivos', requireAuth, async (req, res) => {
 app.put('/api/dispositivos/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { departamento, usuario_responsable, fabricante, modelo, tipo, estado, serie, procesador, nucleos, frecuencia, ram_total, detalles_ram, perifericos } = req.body;
+    const { departamento, usuario_responsable, fabricante, modelo, tipo, estado, serie, procesador, nucleos, frecuencia, ram_total, detalles_ram, perifericos, fecha_compra, meses_garantia } = req.body;
     const pool = getPool();
     await pool.execute(`
-      UPDATE dispositivos SET departamento = ?, usuario_responsable = ?, fabricante = ?, modelo = ?, tipo = ?, estado = ?, serie = ?, procesador = ?, nucleos = ?, frecuencia = ?, ram_total = ?, detalles_ram = ?, perifericos = ?, actualizado_en = CURRENT_TIMESTAMP WHERE id = ?
-    `, [departamento, usuario_responsable || '', fabricante || '', modelo || '', tipo, estado || 'Activo', serie || '', procesador || '', nucleos || '', frecuencia || '', ram_total || '', detalles_ram || '', perifericos || '', id]);
+      UPDATE dispositivos SET departamento = ?, usuario_responsable = ?, fabricante = ?, modelo = ?, tipo = ?, estado = ?, serie = ?, procesador = ?, nucleos = ?, frecuencia = ?, ram_total = ?, detalles_ram = ?, perifericos = ?, fecha_compra = ?, meses_garantia = ?, actualizado_en = CURRENT_TIMESTAMP WHERE id = ?
+    `, [departamento, usuario_responsable || '', fabricante || '', modelo || '', tipo, estado || 'Activo', serie || '', procesador || '', nucleos || '', frecuencia || '', ram_total || '', detalles_ram || '', perifericos || '', fecha_compra || null, meses_garantia || 0, id]);
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: 'Error BD: ' + err.message }); }
 });

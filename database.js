@@ -65,12 +65,15 @@ async function initDB() {
     )
   `);
 
-  // Columnas para compatibilidad hacia atrás
+  // Columnas de compatibilidad y nuevas funciones
   try { await pool.query(`ALTER TABLE dispositivos ADD COLUMN perifericos VARCHAR(255) DEFAULT ''`); } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
   try { await pool.query(`ALTER TABLE dispositivos ADD COLUMN qr_code VARCHAR(100) DEFAULT NULL`); } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
   try { await pool.query(`ALTER TABLE dispositivos ADD UNIQUE INDEX idx_qr_code (qr_code)`); } catch (err) { if (err.code !== 'ER_DUP_KEYNAME' && err.code !== 'ER_DUP_INDEX') console.log(err); }
+  
+  // NUEVAS COLUMNAS PARA GARANTIA
+  try { await pool.query(`ALTER TABLE dispositivos ADD COLUMN fecha_compra DATE DEFAULT NULL`); } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
+  try { await pool.query(`ALTER TABLE dispositivos ADD COLUMN meses_garantia INT DEFAULT 0`); } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
 
-  // TABLAS NUEVAS: CONFIGURACION Y FESTIVOS
   await pool.query(`
     CREATE TABLE IF NOT EXISTS configuraciones (
       clave VARCHAR(50) PRIMARY KEY,
