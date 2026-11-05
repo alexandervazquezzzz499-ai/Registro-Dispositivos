@@ -82,6 +82,8 @@ const fieldFrecuencia = document.getElementById('frecuencia');
 const fieldRamTotal = document.getElementById('ram_total');
 const fieldDetallesRam = document.getElementById('detalles_ram');
 const fieldPerifericos = document.getElementById('perifericos');
+const fieldFechaCompra = document.getElementById('fecha_compra');
+const fieldMesesGarantia = document.getElementById('meses_garantia');
 
 const TIPOS_VALIDOS = ['Desktop', 'All In One', 'Portátil', 'Monitor', 'Impresora', 'Servidor', 'Otro'];
 
@@ -91,6 +93,7 @@ const SVG_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const SVG_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
 const SVG_TOOL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>';
 const SVG_REFRESH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>';
+const SVG_SHIELD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>';
 
 function showToast(message, isError = false) {
   toast.textContent = message;
@@ -143,7 +146,9 @@ function mapearColumna(col) {
     'frecuencia cpu': 'frecuencia', 'frecuencia': 'frecuencia',
     'ram capacidad total': 'ram_total', 'ram total': 'ram_total', 'ram': 'ram_total',
     'detalles ram / ranuras / velocidad': 'detalles_ram', 'detalles ram': 'detalles_ram', 'ram detalles': 'detalles_ram',
-    'perifericos': 'perifericos'
+    'perifericos': 'perifericos',
+    'fecha de compra': 'fecha_compra', 'fecha_compra': 'fecha_compra',
+    'meses de garantia': 'meses_garantia', 'meses_garantia': 'meses_garantia', 'garantia': 'meses_garantia'
   };
   return mapa[n] || null;
 }
@@ -183,10 +188,14 @@ async function cargarNotificaciones(isInitial = false) {
       
       let html = '';
       notifs.forEach(n => {
-        const isReport = n.type === 'reporte';
+        let iconSvg = SVG_REFRESH;
+        let iconClass = 'update';
+        if (n.type === 'reporte') { iconSvg = SVG_TOOL; iconClass = 'report'; }
+        else if (n.type === 'garantia') { iconSvg = SVG_SHIELD; iconClass = 'warranty'; }
+
         html += `
           <div class="notif-item">
-            <div class="notif-icon ${isReport ? 'report' : 'update'}">${isReport ? SVG_TOOL : SVG_REFRESH}</div>
+            <div class="notif-icon ${iconClass}">${iconSvg}</div>
             <div class="notif-content">
               <div class="notif-title">${escapeHtml(n.title)}</div>
               <div class="notif-desc">${escapeHtml(n.desc)}</div>
@@ -214,9 +223,13 @@ function showNotifPopup(notif) {
   const div = document.createElement('div');
   div.className = 'notif-popup';
   
-  const isReport = notif.type === 'reporte';
+  let iconSvg = SVG_REFRESH;
+  let iconClass = 'update';
+  if (notif.type === 'reporte') { iconSvg = SVG_TOOL; iconClass = 'report'; }
+  else if (notif.type === 'garantia') { iconSvg = SVG_SHIELD; iconClass = 'warranty'; }
+
   div.innerHTML = `
-    <div class="notif-icon ${isReport ? 'report' : 'update'}">${isReport ? SVG_TOOL : SVG_REFRESH}</div>
+    <div class="notif-icon ${iconClass}">${iconSvg}</div>
     <div class="notif-content">
       <div class="notif-title">${escapeHtml(notif.title)}</div>
       <div class="notif-desc">${escapeHtml(notif.desc)}</div>
@@ -411,8 +424,10 @@ function renderTable() {
   document.querySelectorAll('.btn-icon.print').forEach(btn => btn.addEventListener('click', (e) => generarNotaEntregaPDF(e.currentTarget.dataset.id)));
   document.querySelectorAll('.btn-icon.qr').forEach(btn => btn.addEventListener('click', (e) => mostrarQRModal(e.currentTarget.dataset.id)));
   
-  // AQUÍ ESTÁ EL INTERCAMBIO DE FUNCIONES
-  document.querySelectorAll('.btn-icon.maintenance').forEach(btn => btn.addEventListener('click', (e) => openEditModal(e.currentTarget.dataset.id))); // La llave ahora Edita
+  // Intercambio de funciones
+  document.querySelectorAll('.btn-icon.maintenance').forEach(btn => btn.addEventListener('click', (e) => openEditModal(e.currentTarget.dataset.id)));
+  document.querySelectorAll('.btn-icon.edit').forEach(btn => btn.addEventListener('click', (e) => openMaintenanceModal(e.currentTarget.dataset.id)));
+  
   document.querySelectorAll('.btn-icon.unblock').forEach(btn => btn.addEventListener('click', async (e) => {
     const id = e.currentTarget.dataset.id;
     mostrarConfirmacion('¿Desbloquear este equipo y reactivar su contador de inactividad?', async () => {
@@ -423,7 +438,6 @@ function renderTable() {
       } catch (err) { showToast(err.message, true); }
     });
   }));
-  document.querySelectorAll('.btn-icon.edit').forEach(btn => btn.addEventListener('click', (e) => openMaintenanceModal(e.currentTarget.dataset.id))); // El lápiz ahora Mantenimiento
   
   document.querySelectorAll('.btn-icon.delete').forEach(btn => btn.addEventListener('click', (e) => {
     const id = e.currentTarget.dataset.id;
@@ -469,6 +483,14 @@ async function generarNotaEntregaPDF(id) {
   doc.text(`N/S (Serie): ${d.serie || 'N/A'}`, 20, 76);
   doc.text(`Departamento: ${d.departamento}`, 120, 58);
   doc.text(`Asignado a: ${d.usuario_responsable || 'N/A'}`, 120, 64);
+  
+  // Añadir info de garantía al PDF si existe
+  if(d.fecha_compra && d.meses_garantia > 0) {
+    const fechaVenc = new Date(d.fecha_compra);
+    fechaVenc.setMonth(fechaVenc.getMonth() + d.meses_garantia);
+    doc.text(`Garantia hasta: ${fechaVenc.toLocaleDateString()}`, 120, 70);
+  }
+
   doc.text('Perifericos Entregados:', 20, 90);
   doc.setFontSize(10);
   doc.text(d.perifericos || 'No se registraron perifericos.', 20, 98);
@@ -609,6 +631,19 @@ function openEditModal(id) {
   fieldRamTotal.value = d.ram_total || '';
   fieldDetallesRam.value = d.detalles_ram || '';
   if(fieldPerifericos) fieldPerifericos.value = d.perifericos || '';
+  
+  // Cargar datos de garantía (formateando la fecha a YYYY-MM-DD)
+  if (d.fecha_compra) {
+    const dateObj = new Date(d.fecha_compra);
+    const yyyy = dateObj.getFullYear();
+    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const dd = String(dateObj.getDate()).padStart(2, '0');
+    fieldFechaCompra.value = `${yyyy}-${mm}-${dd}`;
+  } else {
+    fieldFechaCompra.value = '';
+  }
+  fieldMesesGarantia.value = d.meses_garantia || '';
+
   modalOverlay.classList.add('active');
 }
 
@@ -627,7 +662,9 @@ async function handleFormSubmit(e) {
     serie: fieldSerie ? fieldSerie.value.trim() : '',
     procesador: fieldProcesador.value.trim(), nucleos: fieldNucleos.value.trim(), frecuencia: fieldFrecuencia.value.trim(),
     ram_total: fieldRamTotal.value.trim(), detalles_ram: fieldDetallesRam.value.trim(),
-    perifericos: fieldPerifericos ? fieldPerifericos.value.trim() : ''
+    perifericos: fieldPerifericos ? fieldPerifericos.value.trim() : '',
+    fecha_compra: fieldFechaCompra.value || null,
+    meses_garantia: parseInt(fieldMesesGarantia.value) || 0
   };
 
   if (!payload.departamento || !payload.tipo) return showToast('Departamento y Tipo son obligatorios', true);
@@ -653,10 +690,12 @@ function exportarExcel() {
   const filtered = getFilteredDevices();
   if (filtered.length === 0) { showToast('No hay equipos para exportar', true); return; }
   const fecha = new Date();
-  const headers = ['Estado', 'Departamento', 'Usuario', 'Fabricante', 'Modelo', 'Tipo', 'Serie', 'Procesador', 'Núcleos/CPUs', 'Frecuencia CPU', 'RAM Capacidad Total', 'Detalles RAM / Ranuras / Velocidad', 'Periféricos'];
+  const headers = ['Estado', 'Departamento', 'Usuario', 'Fabricante', 'Modelo', 'Tipo', 'Serie', 'Procesador', 'Núcleos/CPUs', 'Frecuencia CPU', 'RAM Capacidad Total', 'Detalles RAM / Ranuras / Velocidad', 'Periféricos', 'Fecha de Compra', 'Meses de Garantía'];
   let filasHtml = '';
   filtered.forEach((d, i) => {
     const zebra = i % 2 === 0 ? '#ffffff' : '#f7f9fd';
+    const fechaCompraMostrar = d.fecha_compra ? new Date(d.fecha_compra).toLocaleDateString() : '';
+    
     filasHtml += `
       <tr style="background:${zebra};">
         <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.estado || 'Activo')}</td>
@@ -672,10 +711,12 @@ function exportarExcel() {
         <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.ram_total)}</td>
         <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.detalles_ram)}</td>
         <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${escapeHtml(d.perifericos)}</td>
+        <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${fechaCompraMostrar}</td>
+        <td style="border:1px solid #d6ddea; padding:6px 8px; font-size:11px;">${d.meses_garantia || ''}</td>
       </tr>
     `;
   });
-  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table { border-collapse: collapse; }</style></head><body><table><tr><td colspan="13" style="background:#0D1424; color:white; font-size:16px; font-weight:bold; padding:12px; text-align:center; border:1px solid #00E0FF;">INVENTARIO GENERAL DE EQUIPOS DE COMPUTO Y HARDWARE</td></tr><tr><td colspan="13" style="background:#E8ECF1; color:#1A1A1A; font-size:10px; padding:6px; text-align:center; border:1px solid #5A6478;">Reporte generado el ${fecha.toLocaleDateString()} - Total equipos: ${filtered.length}</td></tr><tr><td colspan="13" style="height:8px;"></td></tr><tr>${headers.map(h => `<th style="background:#0D1424; color:white; font-size:11px; padding:8px; border:1px solid #00E0FF; text-transform:uppercase;">${h}</th>`).join('')}</tr>${filasHtml}<tr><td colspan="13" style="height:10px;"></td></tr><tr><td colspan="13" style="background:#f2f2f2; color:#666; font-size:10px; padding:6px; text-align:center; border:1px solid #ccc;">TOTAL EQUIPOS REGISTRADOS: ${filtered.length}</td></tr></table></body></html>`;
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table { border-collapse: collapse; }</style></head><body><table><tr><td colspan="15" style="background:#0D1424; color:white; font-size:16px; font-weight:bold; padding:12px; text-align:center; border:1px solid #00E0FF;">INVENTARIO GENERAL DE EQUIPOS DE COMPUTO Y HARDWARE</td></tr><tr><td colspan="15" style="background:#E8ECF1; color:#1A1A1A; font-size:10px; padding:6px; text-align:center; border:1px solid #5A6478;">Reporte generado el ${fecha.toLocaleDateString()} - Total equipos: ${filtered.length}</td></tr><tr><td colspan="15" style="height:8px;"></td></tr><tr>${headers.map(h => `<th style="background:#0D1424; color:white; font-size:11px; padding:8px; border:1px solid #00E0FF; text-transform:uppercase;">${h}</th>`).join('')}</tr>${filasHtml}<tr><td colspan="15" style="height:10px;"></td></tr><tr><td colspan="15" style="background:#f2f2f2; color:#666; font-size:10px; padding:6px; text-align:center; border:1px solid #ccc;">TOTAL EQUIPOS REGISTRADOS: ${filtered.length}</td></tr></table></body></html>`;
   const blob = new Blob(['\ufeff', html], { type: 'application/vnd.ms-excel;charset=utf-8' });
   const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `inventario_${fecha.toISOString().slice(0, 10)}.xls`;
   link.click(); URL.revokeObjectURL(link.href); showToast(`Exportados ${filtered.length} equipos`);
@@ -722,7 +763,9 @@ function procesarFilas(filasCrudas) {
       serie: datos.serie || '',
       procesador: datos.procesador || '', nucleos: datos.nucleos || '',
       frecuencia: datos.frecuencia || '', ram_total: datos.ram_total || '', detalles_ram: datos.detalles_ram || '',
-      perifericos: datos.perifericos || ''
+      perifericos: datos.perifericos || '',
+      fecha_compra: datos.fecha_compra || null,
+      meses_garantia: parseInt(datos.meses_garantia) || 0
     };
     const errores = [];
     if (!dispositivo.departamento) errores.push('Falta Departamento');
