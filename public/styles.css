@@ -373,3 +373,20 @@ input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; width: 15
   color: #F97316; /* Naranja */
   background: rgba(249, 115, 22, 0.1);
 }
+/* Añadir al final de styles.css */
+
+/* Estilo para los asteriscos de campos obligatorios */
+.form-group label .required {
+  color: var(--danger);
+  font-weight: bold;
+  margin-left: 2px;
+}
+
+/* Estilo para la etiqueta de opcional */
+.form-group label .optional {
+  color: var(--text-subtle);
+  font-size: 0.6rem;
+  font-weight: 400;
+  margin-left: 4px;
+  text-transform: lowercase;
+}
