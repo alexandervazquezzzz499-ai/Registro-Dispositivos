@@ -56,6 +56,8 @@ async function initDB() {
       frecuencia VARCHAR(50),
       ram_total VARCHAR(50),
       detalles_ram VARCHAR(255),
+      perifericos VARCHAR(255) DEFAULT '',
+      qr_code VARCHAR(100) DEFAULT NULL,
       creado_por INT,
       creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -63,25 +65,28 @@ async function initDB() {
     )
   `);
 
-  // AGREGAR NUEVA COLUMNA DE PERIFERICOS
-  try {
-    await pool.query(`ALTER TABLE dispositivos ADD COLUMN perifericos VARCHAR(255) DEFAULT ''`);
-  } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
+  // Columnas para compatibilidad hacia atrás
+  try { await pool.query(`ALTER TABLE dispositivos ADD COLUMN perifericos VARCHAR(255) DEFAULT ''`); } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
+  try { await pool.query(`ALTER TABLE dispositivos ADD COLUMN qr_code VARCHAR(100) DEFAULT NULL`); } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
+  try { await pool.query(`ALTER TABLE dispositivos ADD UNIQUE INDEX idx_qr_code (qr_code)`); } catch (err) { if (err.code !== 'ER_DUP_KEYNAME' && err.code !== 'ER_DUP_INDEX') console.log(err); }
 
-  // AGREGAR COLUMNA qr_code SIN UNIQUE (PlanetScale no lo permite en ALTER)
-  try {
-    await pool.query(`ALTER TABLE dispositivos ADD COLUMN qr_code VARCHAR(100) DEFAULT NULL`);
-  } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
+  // TABLAS NUEVAS: CONFIGURACION Y FESTIVOS
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS configuraciones (
+      clave VARCHAR(50) PRIMARY KEY,
+      valor VARCHAR(255)
+    )
+  `);
+  await pool.query(`INSERT IGNORE INTO configuraciones (clave, valor) VALUES ('dias_inactividad', '15')`);
 
-  // CREAR INDICE UNICO PARA qr_code (SI NO EXISTE)
-  try {
-    await pool.query(`ALTER TABLE dispositivos ADD UNIQUE INDEX idx_qr_code (qr_code)`);
-  } catch (err) { 
-    // Si el índice ya existe, ignorar
-    if (err.code !== 'ER_DUP_KEYNAME' && err.code !== 'ER_DUP_INDEX') console.log(err); 
-  }
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS festivos (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      fecha DATE UNIQUE,
+      nombre VARCHAR(100)
+    )
+  `);
 
-  // GENERAR QR PARA LOS EQUIPOS QUE YA EXISTEN Y NO TIENEN
   const [equiposSinQr] = await pool.query('SELECT id FROM dispositivos WHERE qr_code IS NULL');
   for (let equipo of equiposSinQr) {
     const uuid = crypto.randomUUID();
@@ -96,22 +101,16 @@ async function initDB() {
       solucion TEXT,
       tecnico VARCHAR(100),
       fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      tipo_mantenimiento VARCHAR(50) DEFAULT 'Falla',
       FOREIGN KEY (dispositivo_id) REFERENCES dispositivos(id) ON DELETE CASCADE
     )
   `);
-
-  // AGREGAR NUEVA COLUMNA DE TIPO DE MANTENIMIENTO
-  try {
-    await pool.query(`ALTER TABLE mantenimientos ADD COLUMN tipo_mantenimiento VARCHAR(50) DEFAULT 'Falla'`);
-  } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
+  try { await pool.query(`ALTER TABLE mantenimientos ADD COLUMN tipo_mantenimiento VARCHAR(50) DEFAULT 'Falla'`); } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
 
   const [rows] = await pool.execute('SELECT id FROM usuarios WHERE usuario = ?', ['admin']);
   if (rows.length === 0) {
     const hash = bcrypt.hashSync('admin123', 10);
-    await pool.execute(
-      'INSERT INTO usuarios (usuario, password_hash, nombre, rol) VALUES (?, ?, ?, ?)',
-      ['admin', hash, 'Administrador', 'admin']
-    );
+    await pool.execute('INSERT INTO usuarios (usuario, password_hash, nombre, rol) VALUES (?, ?, ?, ?)', ['admin', hash, 'Administrador', 'admin']);
   }
   return pool;
 }
