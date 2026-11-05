@@ -3,6 +3,7 @@ let currentUser = null;
 let importRows = [];
 let currentMaintenanceDeviceId = null;
 let lastNotifTime = 0;
+let listaRepuestosGlobal = []; // Cache de repuestos
 
 const PALABRAS_GROSERAS = ['mierda', 'pendejo', 'cabron', 'cabrón', 'verga', 'coño', 'joder', 'estupido', 'estúpido', 'idiota', 'culero', 'marico', 'maricón', 'zorra', 'perra', 'gonorrea', 'malparido', 'hijueputa', 'imbecil', 'imbécil'];
 
@@ -46,6 +47,15 @@ const confirmModalOverlay = document.getElementById('confirmModalOverlay');
 const confirmMessage = document.getElementById('confirmMessage');
 const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
 const acceptConfirmBtn = document.getElementById('acceptConfirmBtn');
+
+// REPUESTOS
+const openRepuestosBtn = document.getElementById('openRepuestosBtn');
+const repuestosModalOverlay = document.getElementById('repuestosModalOverlay');
+const closeRepuestosModalBtn = document.getElementById('closeRepuestosModalBtn');
+const newRepuestoForm = document.getElementById('newRepuestoForm');
+const repuestosTableBody = document.getElementById('repuestosTableBody');
+const addRepuestoRowBtn = document.getElementById('addRepuestoRowBtn');
+const repuestosUsadosContainer = document.getElementById('repuestosUsadosContainer');
 
 const configBtn = document.getElementById('configBtn');
 const configModalOverlay = document.getElementById('configModalOverlay');
@@ -94,6 +104,7 @@ const SVG_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
 const SVG_TOOL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>';
 const SVG_REFRESH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>';
 const SVG_SHIELD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>';
+const SVG_BOX = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>';
 
 function showToast(message, isError = false) {
   toast.textContent = message;
@@ -175,6 +186,72 @@ function mostrarConfirmacion(mensaje, callbackAceptar, esEliminar = false) {
 
 function cerrarConfirmacion() { confirmModalOverlay.classList.remove('active'); }
 
+// LOGICA DE REPUESTOS
+async function cargarRepuestos() {
+  try {
+    listaRepuestosGlobal = await apiFetch('/api/repuestos');
+  } catch (err) { console.error('Error al cargar repuestos', err); }
+}
+
+async function abrirModalRepuestos() {
+  repuestosModalOverlay.classList.add('active');
+  repuestosTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Cargando inventario...</td></tr>`;
+  
+  try {
+    await cargarRepuestos();
+    let html = '';
+    listaRepuestosGlobal.forEach(r => {
+      const bajoStock = r.stock <= r.stock_minimo;
+      const colorStock = bajoStock ? 'color:var(--danger); font-weight:bold;' : '';
+      const badgeBajo = bajoStock ? ' <span style="font-size:0.65rem; background:rgba(244,63,94,0.2); color:#F43F5E; padding:2px 4px; border-radius:2px; margin-left:4px;">BAJO</span>' : '';
+
+      html += `
+        <tr>
+          <td>${escapeHtml(r.nombre)}</td>
+          <td style="${colorStock}">${r.stock}${badgeBajo}</td>
+          <td>${r.stock_minimo}</td>
+          <td>
+            <button class="btn-icon delete-repuesto" data-id="${r.id}" title="Eliminar">${SVG_TRASH}</button>
+          </td>
+        </tr>
+      `;
+    });
+    repuestosTableBody.innerHTML = html || '<tr><td colspan="4" style="text-align:center; color:var(--text-subtle);">No hay repuestos en el inventario</td></tr>';
+
+    document.querySelectorAll('.delete-repuesto').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.dataset.id;
+        mostrarConfirmacion('¿Eliminar este repuesto del inventario?', async () => {
+          await apiFetch(`/api/repuestos/${id}`, { method: 'DELETE' });
+          abrirModalRepuestos(); // recargar
+        }, true);
+      });
+    });
+  } catch (err) {
+    repuestosTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--danger);">Error al cargar inventario</td></tr>`;
+  }
+}
+
+async function handleNewRepuestoSubmit(e) {
+  e.preventDefault();
+  const nombre = document.getElementById('newRepuestoNombre').value.trim();
+  const stock = parseInt(document.getElementById('newRepuestoStock').value);
+  const stock_minimo = parseInt(document.getElementById('newRepuestoMinimo').value);
+
+  if (!nombre) return showToast('El nombre es obligatorio', true);
+
+  try {
+    await apiFetch('/api/repuestos', { 
+      method: 'POST', 
+      body: JSON.stringify({ nombre, stock, stock_minimo }) 
+    });
+    showToast('Repuesto añadido al inventario');
+    newRepuestoForm.reset();
+    abrirModalRepuestos();
+  } catch (err) { showToast(err.message, true); }
+}
+
+// NOTIFICACIONES
 async function cargarNotificaciones(isInitial = false) {
   try {
     const notifs = await apiFetch('/api/notificaciones');
@@ -192,6 +269,7 @@ async function cargarNotificaciones(isInitial = false) {
         let iconClass = 'update';
         if (n.type === 'reporte') { iconSvg = SVG_TOOL; iconClass = 'report'; }
         else if (n.type === 'garantia') { iconSvg = SVG_SHIELD; iconClass = 'warranty'; }
+        else if (n.type === 'inventario') { iconSvg = SVG_BOX; iconClass = 'inventory'; }
 
         html += `
           <div class="notif-item">
@@ -227,6 +305,7 @@ function showNotifPopup(notif) {
   let iconClass = 'update';
   if (notif.type === 'reporte') { iconSvg = SVG_TOOL; iconClass = 'report'; }
   else if (notif.type === 'garantia') { iconSvg = SVG_SHIELD; iconClass = 'warranty'; }
+  else if (notif.type === 'inventario') { iconSvg = SVG_BOX; iconClass = 'inventory'; }
 
   div.innerHTML = `
     <div class="notif-icon ${iconClass}">${iconSvg}</div>
@@ -245,6 +324,7 @@ function showNotifPopup(notif) {
   }, 5000);
 }
 
+// USUARIOS Y CONFIGURACION
 async function abrirModalUsuarios() {
   usersModalOverlay.classList.add('active');
   usersTableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Cargando usuarios...</td></tr>`;
@@ -484,7 +564,6 @@ async function generarNotaEntregaPDF(id) {
   doc.text(`Departamento: ${d.departamento}`, 120, 58);
   doc.text(`Asignado a: ${d.usuario_responsable || 'N/A'}`, 120, 64);
   
-  // Añadir info de garantía al PDF si existe
   if(d.fecha_compra && d.meses_garantia > 0) {
     const fechaVenc = new Date(d.fecha_compra);
     fechaVenc.setMonth(fechaVenc.getMonth() + d.meses_garantia);
@@ -523,6 +602,43 @@ async function eliminarDispositivo(id) {
   } catch (err) { showToast(err.message, true); }
 }
 
+function addRepuestoRow() {
+  if (listaRepuestosGlobal.length === 0) {
+    showToast('Primero debes agregar repuestos al inventario', true);
+    return;
+  }
+
+  const row = document.createElement('div');
+  row.className = 'repuesto-row';
+  row.style.display = 'flex';
+  row.style.gap = '8px';
+  row.style.alignItems = 'center';
+  
+  const optionsHtml = listaRepuestosGlobal
+    .filter(r => r.stock > 0)
+    .map(r => `<option value="${r.id}">${r.nombre} (Disp: ${r.stock})</option>`)
+    .join('');
+
+  if (!optionsHtml) {
+    showToast('No hay repuestos con stock disponible', true);
+    return;
+  }
+  
+  row.innerHTML = `
+    <select class="repuesto-select" style="flex:2; padding:0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.25); color:var(--text); font-size:0.8rem;">
+      <option value="">Seleccionar repuesto...</option>
+      ${optionsHtml}
+    </select>
+    <input type="number" class="repuesto-cantidad" value="1" min="1" style="flex:1; max-width:80px; padding:0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:rgba(0,0,0,0.25); color:var(--text); font-size:0.8rem;">
+    <button type="button" class="btn-icon delete-repuesto-row" style="color:#F43F5E;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+    </button>
+  `;
+  
+  row.querySelector('.delete-repuesto-row').addEventListener('click', () => row.remove());
+  repuestosUsadosContainer.appendChild(row);
+}
+
 async function openMaintenanceModal(id) {
   const d = devices.find(x => String(x.id) === String(id));
   if (!d) return;
@@ -532,8 +648,11 @@ async function openMaintenanceModal(id) {
   const nombreTecnico = currentUser ? currentUser.nombre : 'Desconocido';
   maintenanceDeviceInfo.innerHTML = `Equipo: <b>${escapeHtml(d.fabricante)} ${escapeHtml(d.modelo)}</b><br><span style="color:var(--accent); font-weight:600; font-size:0.75rem;">Tecnico en sesion: ${escapeHtml(nombreTecnico)}</span>`;
   maintenanceForm.reset();
+  repuestosUsadosContainer.innerHTML = '';
   maintenanceHistoryBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Cargando historial...</td></tr>`;
   maintenanceModalOverlay.classList.add('active');
+
+  await cargarRepuestos(); // Asegurar que tenemos los repuestos frescos
 
   try {
     const historial = await apiFetch(`/api/dispositivos/${id}/mantenimientos`);
@@ -543,12 +662,19 @@ async function openMaintenanceModal(id) {
       let html = '';
       historial.forEach(h => {
         const fecha = new Date(h.fecha).toLocaleString('es-ES');
+        
+        let repuestosHtml = '';
+        if(h.repuestos_usados) {
+          repuestosHtml = `<br><span style="font-size:0.65rem; color:var(--warning);">Repuestos: ${escapeHtml(h.repuestos_usados)}</span>`;
+        }
+
         const solucionHtml = `
           <div style="display:flex; align-items:center; gap:6px;">
             <span style="font-size:0.75rem; color:${h.solucion ? 'var(--accent)' : 'var(--text-subtle)'}; ${!h.solucion ? 'font-style:italic;' : ''}">
               ${h.solucion ? escapeHtml(h.solucion) : 'Pendiente'}
             </span>
             <button class="btn-inline btn-agregar-solucion" data-id="${h.id}" data-solucion="${escapeHtml(h.solucion || '')}" title="Modificar Solucion">${SVG_PENCIL}</button>
+            ${repuestosHtml}
           </div>
         `;
         html += `
@@ -588,14 +714,33 @@ async function handleMaintenanceSubmit(e) {
   const falla = document.getElementById('falla').value.trim();
   const solucion = document.getElementById('solucion').value.trim();
   const tipo_mantenimiento = document.getElementById('tipo_mantenimiento').value;
+  
   if (!falla) return showToast('La falla o componente es obligatorio', true);
   if (contieneGroserias(falla) || contieneGroserias(solucion)) return showToast('El texto contiene palabras no permitidas.', true);
 
+  // Recopilar repuestos usados
+  const repuestos = [];
+  const rows = document.querySelectorAll('.repuesto-row');
+  for (let row of rows) {
+    const select = row.querySelector('.repuesto-select');
+    const cantInput = row.querySelector('.repuesto-cantidad');
+    if (select.value) {
+      const cant = parseInt(cantInput.value);
+      if (cant > 0) {
+        repuestos.push({ id: parseInt(select.value), cantidad: cant });
+      }
+    }
+  }
+
   try {
-    await apiFetch(`/api/dispositivos/${currentMaintenanceDeviceId}/mantenimientos`, { method: 'POST', body: JSON.stringify({ falla, solucion, tipo_mantenimiento }) });
-    showToast('Reporte guardado correctamente');
+    await apiFetch(`/api/dispositivos/${currentMaintenanceDeviceId}/mantenimientos`, { 
+      method: 'POST', 
+      body: JSON.stringify({ falla, solucion, tipo_mantenimiento, repuestos }) 
+    });
+    showToast('Reporte guardado y stock actualizado');
     openMaintenanceModal(currentMaintenanceDeviceId);
     maintenanceForm.reset();
+    repuestosUsadosContainer.innerHTML = '';
   } catch (err) { showToast("Error al guardar: " + err.message, true); }
 }
 
@@ -632,7 +777,6 @@ function openEditModal(id) {
   fieldDetallesRam.value = d.detalles_ram || '';
   if(fieldPerifericos) fieldPerifericos.value = d.perifericos || '';
   
-  // Cargar datos de garantía (formateando la fecha a YYYY-MM-DD)
   if (d.fecha_compra) {
     const dateObj = new Date(d.fecha_compra);
     const yyyy = dateObj.getFullYear();
@@ -901,6 +1045,12 @@ function initEvents() {
   searchInput.addEventListener('input', renderTable);
   filterType.addEventListener('change', renderTable);
 
+  openRepuestosBtn.addEventListener('click', abrirModalRepuestos);
+  closeRepuestosModalBtn.addEventListener('click', () => repuestosModalOverlay.classList.remove('active'));
+  repuestosModalOverlay.addEventListener('click', (e) => { if (e.target === repuestosModalOverlay) repuestosModalOverlay.classList.remove('active'); });
+  newRepuestoForm.addEventListener('submit', handleNewRepuestoSubmit);
+  addRepuestoRowBtn.addEventListener('click', addRepuestoRow);
+
   manageUsersBtn.addEventListener('click', abrirModalUsuarios);
   closeUsersModalBtn.addEventListener('click', () => usersModalOverlay.classList.remove('active'));
   usersModalOverlay.addEventListener('click', (e) => { if (e.target === usersModalOverlay) usersModalOverlay.classList.remove('active'); });
@@ -990,6 +1140,7 @@ function initEvents() {
       if (confirmModalOverlay.classList.contains('active')) cerrarConfirmacion();
       if (qrModalOverlay.classList.contains('active')) qrModalOverlay.classList.remove('active');
       if (configModalOverlay.classList.contains('active')) configModalOverlay.classList.remove('active');
+      if (repuestosModalOverlay.classList.contains('active')) repuestosModalOverlay.classList.remove('active');
       if (notifDropdown.classList.contains('active')) notifDropdown.classList.remove('active');
     }
   });
@@ -1014,6 +1165,7 @@ function initEvents() {
   initEvents();
   await cargarDispositivos();
   await cargarNotificaciones(true);
+  await cargarRepuestos(); // Precargar repuestos al iniciar
   
   setInterval(() => { 
     cargarDispositivos(true); 

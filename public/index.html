@@ -88,6 +88,12 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
           Ver Historial
         </button>
+        
+        <button class="btn-secondary" id="openRepuestosBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9m3 7h9M3 7h5v2H3zm0 7h9v2H3z"></path></svg>
+          Repuestos
+        </button>
+
         <button class="btn-secondary" id="importExcelBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           Importar
@@ -129,6 +135,40 @@
 
   <input type="file" id="importFileInput" accept=".xls,.xlsx,.csv" style="display:none;">
 
+  <!-- MODAL REPUESTOS -->
+  <div class="modal-overlay" id="repuestosModalOverlay">
+    <div class="modal" style="max-width: 700px;">
+      <h2>Inventario de Repuestos</h2>
+      
+      <form id="newRepuestoForm" class="modal-section" style="display:flex; gap:10px; align-items:flex-end;">
+        <div class="form-group" style="flex:2;">
+          <label>Nombre del Repuesto</label>
+          <input type="text" id="newRepuestoNombre" required placeholder="Ej: Tóner HP 85A">
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label>Stock Inicial</label>
+          <input type="number" id="newRepuestoStock" required min="0" value="1">
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label>Stock Mínimo</label>
+          <input type="number" id="newRepuestoMinimo" required min="1" value="2">
+        </div>
+        <button type="submit" class="btn-primary" style="height: 36px;">Añadir</button>
+      </form>
+
+      <div class="import-preview-wrapper" style="max-height: 350px;">
+        <table class="import-preview">
+          <thead><tr><th>Nombre</th><th>Stock</th><th>Stock Mínimo</th><th>Acciones</th></tr></thead>
+          <tbody id="repuestosTableBody"></tbody>
+        </table>
+      </div>
+      
+      <div class="modal-actions" style="margin-top:15px;">
+        <button type="button" class="btn-secondary" id="closeRepuestosModalBtn">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL DISPOSITIVO -->
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal">
@@ -165,7 +205,6 @@
           <div class="form-group"><label>Modelo</label><input type="text" id="modelo"></div>
           <div class="form-group"><label>N° de Serie</label><input type="text" id="serie"></div>
           
-          <!-- NUEVOS CAMPOS DE GARANTIA -->
           <div class="form-group"><label>Fecha de Compra</label><input type="date" id="fecha_compra"></div>
           <div class="form-group"><label>Meses de Garantía</label><input type="number" id="meses_garantia" min="0" placeholder="Ej: 12"></div>
           
@@ -285,6 +324,16 @@
         </div>
         <div class="form-group"><label>Falla o Componente Modificado *</label><textarea id="falla" required></textarea></div>
         <div class="form-group" style="margin-top:10px;"><label>Solución aplicada (Opcional por ahora)</label><textarea id="solucion"></textarea></div>
+        
+        <!-- SECCION DE REPUESTOS -->
+        <div class="form-group" style="margin-top:15px; border-top:1px solid var(--glass-border); padding-top:15px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <label>Repuestos Utilizados</label>
+            <button type="button" class="btn-secondary" id="addRepuestoRowBtn" style="padding:0.2rem 0.5rem; font-size:0.6875rem;">+ Añadir</button>
+          </div>
+          <div id="repuestosUsadosContainer" style="display:flex; flex-direction:column; gap:5px; margin-top:8px;"></div>
+        </div>
+
         <button type="submit" class="btn-primary" style="margin-top:15px; width:100%;">Guardar Reporte</button>
       </form>
       <div class="import-preview-wrapper" style="max-height: 250px;">
@@ -360,6 +409,6 @@
   </div>
 
   <div class="toast" id="toast">Guardado</div>
-  <script src="app.js?v=17"></script>
+  <script src="app.js?v=18"></script>
 </body>
 </html>

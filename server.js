@@ -93,19 +93,17 @@ app.get('/api/session', (req, res) => {
   res.json({ autenticado: false });
 });
 
-// NOTIFICACIONES (ACTUALIZADO CON GARANTIAS)
+// NOTIFICACIONES
 app.get('/api/notificaciones', requireAuth, async (req, res) => {
   try {
     const pool = getPool();
     
-    // 1. Reportes recientes
     const [reports] = await pool.query(`
       SELECT m.id, m.falla, m.tecnico, m.fecha, d.fabricante, d.modelo, d.id as dev_id
       FROM mantenimientos m JOIN dispositivos d ON m.dispositivo_id = d.id
       ORDER BY m.fecha DESC LIMIT 3
     `);
 
-    // 2. Cambios de estado recientes
     const [updates] = await pool.query(`
       SELECT id as dev_id, fabricante, modelo, estado, actualizado_en
       FROM dispositivos
@@ -113,13 +111,16 @@ app.get('/api/notificaciones', requireAuth, async (req, res) => {
       ORDER BY actualizado_en DESC LIMIT 3
     `);
 
-    // 3. Garantías por vencer (en los próximos 30 días)
     const [warranties] = await pool.query(`
       SELECT id as dev_id, fabricante, modelo, fecha_compra, meses_garantia,
              DATE_ADD(fecha_compra, INTERVAL meses_garantia MONTH) as fecha_vencimiento
       FROM dispositivos
       WHERE fecha_compra IS NOT NULL AND meses_garantia > 0
         AND DATE_ADD(fecha_compra, INTERVAL meses_garantia MONTH) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+    `);
+
+    const [lowStock] = await pool.query(`
+      SELECT id, nombre, stock, stock_minimo FROM repuestos WHERE stock <= stock_minimo AND stock > 0
     `);
     
     const notifs = [
@@ -131,9 +132,15 @@ app.get('/api/notificaciones', requireAuth, async (req, res) => {
           type: 'garantia', 
           title: `Garantía por vencer: ${w.fabricante} ${w.modelo}`, 
           desc: `Vence en ${diasRestantes} días (${new Date(w.fecha_vencimiento).toLocaleDateString()})`, 
-          date: new Date() // Para que salga arriba
+          date: new Date()
         };
-      })
+      }),
+      ...lowStock.map(l => ({
+        type: 'inventario',
+        title: `Stock Bajo: ${l.nombre}`,
+        desc: `Quedan ${l.stock} unidades (Mínimo: ${l.stock_minimo})`,
+        date: new Date()
+      }))
     ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
     
     res.json(notifs);
@@ -193,7 +200,50 @@ app.post('/api/dispositivos/:id/desbloquear', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Error al desbloquear' }); }
 });
 
-// RESTO DE RUTAS
+// REPUESTOS
+app.get('/api/repuestos', requireAuth, async (req, res) => {
+  try {
+    const pool = getPool();
+    const [rows] = await pool.query('SELECT * FROM repuestos ORDER BY nombre ASC');
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: 'Error al obtener repuestos' }); }
+});
+
+app.post('/api/repuestos', requireAuth, async (req, res) => {
+  const { nombre, stock, stock_minimo } = req.body;
+  if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
+  try {
+    const pool = getPool();
+    const [result] = await pool.execute(
+      'INSERT INTO repuestos (nombre, stock, stock_minimo) VALUES (?, ?, ?)',
+      [nombre, stock || 0, stock_minimo || 1]
+    );
+    res.json({ ok: true, id: result.insertId });
+  } catch (err) { res.status(500).json({ error: 'Error al crear repuesto' }); }
+});
+
+app.put('/api/repuestos/:id', requireAuth, async (req, res) => {
+  const { nombre, stock, stock_minimo } = req.body;
+  try {
+    const pool = getPool();
+    await pool.execute(
+      'UPDATE repuestos SET nombre = ?, stock = ?, stock_minimo = ? WHERE id = ?',
+      [nombre, stock, stock_minimo, req.params.id]
+    );
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: 'Error al actualizar repuesto' }); }
+});
+
+app.delete('/api/repuestos/:id', requireAuth, async (req, res) => {
+  if (req.session.rol !== 'admin') return res.status(403).json({ error: 'Solo administradores' });
+  try {
+    const pool = getPool();
+    await pool.execute('DELETE FROM repuestos WHERE id = ?', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: 'Error al eliminar repuesto' }); }
+});
+
+// USUARIOS Y DISPOSITIVOS
 app.post('/api/cambiar-password', requireAuth, async (req, res) => {
   const { passwordActual, passwordNueva } = req.body;
   if (!passwordActual || !passwordNueva) return res.status(400).json({ error: 'Todos los campos son obligatorios' });
@@ -293,24 +343,71 @@ app.delete('/api/dispositivos/:id', requireAuth, async (req, res) => {
 app.get('/api/dispositivos/:id/mantenimientos', requireAuth, async (req, res) => {
   try {
     const pool = getPool();
-    const [rows] = await pool.execute('SELECT * FROM mantenimientos WHERE dispositivo_id = ? ORDER BY fecha DESC', [req.params.id]);
+    const [rows] = await pool.query(`
+      SELECT m.*, 
+             (SELECT GROUP_CONCAT(CONCAT(r.nombre, ' (x', mr.cantidad, ')') SEPARATOR ', ') 
+              FROM mantenimientos_repuestos mr 
+              JOIN repuestos r ON mr.repuesto_id = r.id 
+              WHERE mr.mantenimiento_id = m.id) AS repuestos_usados
+      FROM mantenimientos m 
+      WHERE m.dispositivo_id = ? ORDER BY m.fecha DESC
+    `, [req.params.id]);
     res.json(rows);
   } catch (err) { res.status(500).json({ error: 'Error al obtener mantenimientos' }); }
 });
 
 app.post('/api/dispositivos/:id/mantenimientos', requireAuth, async (req, res) => {
-  const { falla, solucion, tipo_mantenimiento } = req.body;
+  const { falla, solucion, tipo_mantenimiento, repuestos } = req.body;
   if (!falla) return res.status(400).json({ error: 'La Falla reportada es obligatoria.' });
+  
+  const pool = getPool();
+  const conn = await pool.getConnection();
   try {
-    const pool = getPool();
-    const [devRows] = await pool.execute('SELECT estado FROM dispositivos WHERE id = ?', [req.params.id]);
+    await conn.beginTransaction();
+
+    // 1. Verificar si el equipo esta bloqueado
+    const [devRows] = await conn.execute('SELECT estado FROM dispositivos WHERE id = ?', [req.params.id]);
     if (devRows[0]?.estado === 'Bloqueado') {
+      await conn.rollback();
       return res.status(403).json({ error: 'El equipo esta bloqueado. Desbloquéelo antes de agregar mantenimientos.' });
     }
-    await pool.execute(`INSERT INTO mantenimientos (dispositivo_id, falla, solucion, tecnico, tipo_mantenimiento) VALUES (?, ?, ?, ?, ?)`, [req.params.id, falla, solucion || null, req.session.nombre, tipo_mantenimiento || 'Falla']);
-    await pool.execute('UPDATE dispositivos SET actualizado_en = CURRENT_TIMESTAMP WHERE id = ?', [req.params.id]);
+
+    // 2. Insertar mantenimiento
+    const [mantResult] = await conn.execute(
+      `INSERT INTO mantenimientos (dispositivo_id, falla, solucion, tecnico, tipo_mantenimiento) VALUES (?, ?, ?, ?, ?)`, 
+      [req.params.id, falla, solucion || null, req.session.nombre, tipo_mantenimiento || 'Falla']
+    );
+    const mantenimientoId = mantResult.insertId;
+
+    // 3. Procesar repuestos utilizados (si hay)
+    if (repuestos && Array.isArray(repuestos) && repuestos.length > 0) {
+      for (let r of repuestos) {
+        if (r.id && r.cantidad > 0) {
+          // Insertar relacion
+          await conn.execute(
+            'INSERT INTO mantenimientos_repuestos (mantenimiento_id, repuesto_id, cantidad) VALUES (?, ?, ?)',
+            [mantenimientoId, r.id, r.cantidad]
+          );
+          // Restar stock
+          await conn.execute(
+            'UPDATE repuestos SET stock = stock - ? WHERE id = ?',
+            [r.cantidad, r.id]
+          );
+        }
+      }
+    }
+
+    // 4. Actualizar fecha de actividad del dispositivo
+    await conn.execute('UPDATE dispositivos SET actualizado_en = CURRENT_TIMESTAMP WHERE id = ?', [req.params.id]);
+
+    await conn.commit();
     res.json({ ok: true });
-  } catch (err) { res.status(500).json({ error: 'Error BD: ' + err.message }); }
+  } catch (err) { 
+    await conn.rollback();
+    res.status(500).json({ error: 'Error BD: ' + err.message }); 
+  } finally {
+    conn.release();
+  }
 });
 
 app.put('/api/mantenimientos/:id/solucion', requireAuth, async (req, res) => {
@@ -327,7 +424,11 @@ app.get('/api/todos-mantenimientos', requireAuth, async (req, res) => {
   try {
     const pool = getPool();
     const [rows] = await pool.query(`
-      SELECT m.*, d.fabricante, d.modelo, d.departamento, d.serie
+      SELECT m.*, d.fabricante, d.modelo, d.departamento, d.serie,
+             (SELECT GROUP_CONCAT(CONCAT(r.nombre, ' (x', mr.cantidad, ')') SEPARATOR ', ') 
+              FROM mantenimientos_repuestos mr 
+              JOIN repuestos r ON mr.repuesto_id = r.id 
+              WHERE mr.mantenimiento_id = m.id) AS repuestos_usados
       FROM mantenimientos m
       JOIN dispositivos d ON m.dispositivo_id = d.id
       ORDER BY m.fecha DESC

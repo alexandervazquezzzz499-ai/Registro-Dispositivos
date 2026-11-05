@@ -368,3 +368,8 @@ input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; width: 15
   color: #FBBF24; /* Amarillo advertencia */
   background: rgba(251, 191, 36, 0.1);
 }
+/* Añadir al final de styles.css */
+.notif-icon.inventory {
+  color: #F97316; /* Naranja */
+  background: rgba(249, 115, 22, 0.1);
+}

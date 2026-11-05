@@ -58,6 +58,8 @@ async function initDB() {
       detalles_ram VARCHAR(255),
       perifericos VARCHAR(255) DEFAULT '',
       qr_code VARCHAR(100) DEFAULT NULL,
+      fecha_compra DATE DEFAULT NULL,
+      meses_garantia INT DEFAULT 0,
       creado_por INT,
       creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -69,8 +71,6 @@ async function initDB() {
   try { await pool.query(`ALTER TABLE dispositivos ADD COLUMN perifericos VARCHAR(255) DEFAULT ''`); } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
   try { await pool.query(`ALTER TABLE dispositivos ADD COLUMN qr_code VARCHAR(100) DEFAULT NULL`); } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
   try { await pool.query(`ALTER TABLE dispositivos ADD UNIQUE INDEX idx_qr_code (qr_code)`); } catch (err) { if (err.code !== 'ER_DUP_KEYNAME' && err.code !== 'ER_DUP_INDEX') console.log(err); }
-  
-  // NUEVAS COLUMNAS PARA GARANTIA
   try { await pool.query(`ALTER TABLE dispositivos ADD COLUMN fecha_compra DATE DEFAULT NULL`); } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
   try { await pool.query(`ALTER TABLE dispositivos ADD COLUMN meses_garantia INT DEFAULT 0`); } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
 
@@ -87,6 +87,16 @@ async function initDB() {
       id INT AUTO_INCREMENT PRIMARY KEY,
       fecha DATE UNIQUE,
       nombre VARCHAR(100)
+    )
+  `);
+
+  // TABLA DE REPUESTOS
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS repuestos (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      nombre VARCHAR(100) NOT NULL,
+      stock INT NOT NULL DEFAULT 0,
+      stock_minimo INT NOT NULL DEFAULT 1
     )
   `);
 
@@ -109,6 +119,18 @@ async function initDB() {
     )
   `);
   try { await pool.query(`ALTER TABLE mantenimientos ADD COLUMN tipo_mantenimiento VARCHAR(50) DEFAULT 'Falla'`); } catch (err) { if (err.code !== 'ER_DUP_FIELDNAME') console.log(err); }
+
+  // TABLA RELACIONAL DE MANTENIMIENTOS Y REPUESTOS
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS mantenimientos_repuestos (
+      mantenimiento_id INT,
+      repuesto_id INT,
+      cantidad INT NOT NULL DEFAULT 1,
+      PRIMARY KEY (mantenimiento_id, repuesto_id),
+      FOREIGN KEY (mantenimiento_id) REFERENCES mantenimientos(id) ON DELETE CASCADE,
+      FOREIGN KEY (repuesto_id) REFERENCES repuestos(id) ON DELETE CASCADE
+    )
+  `);
 
   const [rows] = await pool.execute('SELECT id FROM usuarios WHERE usuario = ?', ['admin']);
   if (rows.length === 0) {
