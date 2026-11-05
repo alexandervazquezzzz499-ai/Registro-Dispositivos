@@ -181,6 +181,8 @@ body {
 .notif-icon svg { width: 14px; height: 14px; }
 .notif-icon.report { color: var(--warning); background: rgba(251,191,36,0.1); }
 .notif-icon.update { color: var(--accent); background: rgba(0,224,255,0.1); }
+.notif-icon.warranty { color: #FBBF24; background: rgba(251, 191, 36, 0.1); }
+.notif-icon.inventory { color: #F97316; background: rgba(249, 115, 22, 0.1); }
 
 .notif-content { flex: 1; }
 .notif-title { font-size: 0.8125rem; font-weight: 600; color: var(--text); margin-bottom: 2px; }
@@ -324,6 +326,20 @@ tbody tr:hover td { background: rgba(255, 255, 255, 0.025); }
 .form-group textarea { resize: vertical; min-height: 68px; line-height: 1.45; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid rgba(255, 255, 255, 0.08); }
 
+/* Estilos para campos obligatorios/opcionales */
+.form-group label .required {
+  color: var(--danger);
+  font-weight: bold;
+  margin-left: 2px;
+}
+.form-group label .optional {
+  color: var(--text-subtle);
+  font-size: 0.6rem;
+  font-weight: 400;
+  margin-left: 4px;
+  text-transform: lowercase;
+}
+
 /* ========== MANTENIMIENTO ========== */
 .mantenimiento-info { background: rgba(0, 0, 0, 0.2); border: 1px solid var(--glass-border); padding: 0.875rem 1rem; border-radius: var(--radius); margin-bottom: 1.25rem; font-size: 0.8125rem; line-height: 1.5; }
 .mantenimiento-form { background: rgba(0, 0, 0, 0.2); padding: 1rem; border-radius: var(--radius); border: 1px solid var(--glass-border); margin-bottom: 1.25rem; }
@@ -363,30 +379,23 @@ input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; width: 15
   .user-details { display: none; }
   .btn-primary, .btn-secondary, .btn-danger { justify-content: center; }
 }
-/* Añadir al final de styles.css */
-.notif-icon.warranty {
-  color: #FBBF24; /* Amarillo advertencia */
-  background: rgba(251, 191, 36, 0.1);
-}
-/* Añadir al final de styles.css */
-.notif-icon.inventory {
-  color: #F97316; /* Naranja */
-  background: rgba(249, 115, 22, 0.1);
-}
-/* Añadir al final de styles.css */
 
-/* Estilo para los asteriscos de campos obligatorios */
-.form-group label .required {
-  color: var(--danger);
-  font-weight: bold;
-  margin-left: 2px;
+/* ========== SCROLLBARS PERSONALIZADOS ========== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-/* Estilo para la etiqueta de opcional */
-.form-group label .optional {
-  color: var(--text-subtle);
-  font-size: 0.6rem;
-  font-weight: 400;
-  margin-left: 4px;
-  text-transform: lowercase;
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }

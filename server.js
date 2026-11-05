@@ -365,30 +365,25 @@ app.post('/api/dispositivos/:id/mantenimientos', requireAuth, async (req, res) =
   try {
     await conn.beginTransaction();
 
-    // 1. Verificar si el equipo esta bloqueado
     const [devRows] = await conn.execute('SELECT estado FROM dispositivos WHERE id = ?', [req.params.id]);
     if (devRows[0]?.estado === 'Bloqueado') {
       await conn.rollback();
       return res.status(403).json({ error: 'El equipo esta bloqueado. Desbloquéelo antes de agregar mantenimientos.' });
     }
 
-    // 2. Insertar mantenimiento
     const [mantResult] = await conn.execute(
       `INSERT INTO mantenimientos (dispositivo_id, falla, solucion, tecnico, tipo_mantenimiento) VALUES (?, ?, ?, ?, ?)`, 
       [req.params.id, falla, solucion || null, req.session.nombre, tipo_mantenimiento || 'Falla']
     );
     const mantenimientoId = mantResult.insertId;
 
-    // 3. Procesar repuestos utilizados (si hay)
     if (repuestos && Array.isArray(repuestos) && repuestos.length > 0) {
       for (let r of repuestos) {
         if (r.id && r.cantidad > 0) {
-          // Insertar relacion
           await conn.execute(
             'INSERT INTO mantenimientos_repuestos (mantenimiento_id, repuesto_id, cantidad) VALUES (?, ?, ?)',
             [mantenimientoId, r.id, r.cantidad]
           );
-          // Restar stock
           await conn.execute(
             'UPDATE repuestos SET stock = stock - ? WHERE id = ?',
             [r.cantidad, r.id]
@@ -397,7 +392,6 @@ app.post('/api/dispositivos/:id/mantenimientos', requireAuth, async (req, res) =
       }
     }
 
-    // 4. Actualizar fecha de actividad del dispositivo
     await conn.execute('UPDATE dispositivos SET actualizado_en = CURRENT_TIMESTAMP WHERE id = ?', [req.params.id]);
 
     await conn.commit();

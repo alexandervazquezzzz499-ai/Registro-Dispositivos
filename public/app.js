@@ -3,7 +3,7 @@ let currentUser = null;
 let importRows = [];
 let currentMaintenanceDeviceId = null;
 let lastNotifTime = 0;
-let listaRepuestosGlobal = []; // Cache de repuestos
+let listaRepuestosGlobal = []; 
 
 const PALABRAS_GROSERAS = ['mierda', 'pendejo', 'cabron', 'cabrón', 'verga', 'coño', 'joder', 'estupido', 'estúpido', 'idiota', 'culero', 'marico', 'maricón', 'zorra', 'perra', 'gonorrea', 'malparido', 'hijueputa', 'imbecil', 'imbécil'];
 
@@ -186,7 +186,6 @@ function mostrarConfirmacion(mensaje, callbackAceptar, esEliminar = false) {
 
 function cerrarConfirmacion() { confirmModalOverlay.classList.remove('active'); }
 
-// LOGICA DE REPUESTOS
 async function cargarRepuestos() {
   try {
     listaRepuestosGlobal = await apiFetch('/api/repuestos');
@@ -223,7 +222,7 @@ async function abrirModalRepuestos() {
         const id = e.currentTarget.dataset.id;
         mostrarConfirmacion('¿Eliminar este repuesto del inventario?', async () => {
           await apiFetch(`/api/repuestos/${id}`, { method: 'DELETE' });
-          abrirModalRepuestos(); // recargar
+          abrirModalRepuestos(); 
         }, true);
       });
     });
@@ -251,7 +250,6 @@ async function handleNewRepuestoSubmit(e) {
   } catch (err) { showToast(err.message, true); }
 }
 
-// NOTIFICACIONES
 async function cargarNotificaciones(isInitial = false) {
   try {
     const notifs = await apiFetch('/api/notificaciones');
@@ -324,7 +322,6 @@ function showNotifPopup(notif) {
   }, 5000);
 }
 
-// USUARIOS Y CONFIGURACION
 async function abrirModalUsuarios() {
   usersModalOverlay.classList.add('active');
   usersTableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Cargando usuarios...</td></tr>`;
@@ -652,7 +649,7 @@ async function openMaintenanceModal(id) {
   maintenanceHistoryBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Cargando historial...</td></tr>`;
   maintenanceModalOverlay.classList.add('active');
 
-  await cargarRepuestos(); // Asegurar que tenemos los repuestos frescos
+  await cargarRepuestos(); 
 
   try {
     const historial = await apiFetch(`/api/dispositivos/${id}/mantenimientos`);
@@ -718,7 +715,6 @@ async function handleMaintenanceSubmit(e) {
   if (!falla) return showToast('La falla o componente es obligatorio', true);
   if (contieneGroserias(falla) || contieneGroserias(solucion)) return showToast('El texto contiene palabras no permitidas.', true);
 
-  // Recopilar repuestos usados
   const repuestos = [];
   const rows = document.querySelectorAll('.repuesto-row');
   for (let row of rows) {
@@ -1165,7 +1161,7 @@ function initEvents() {
   initEvents();
   await cargarDispositivos();
   await cargarNotificaciones(true);
-  await cargarRepuestos(); // Precargar repuestos al iniciar
+  await cargarRepuestos(); 
   
   setInterval(() => { 
     cargarDispositivos(true); 

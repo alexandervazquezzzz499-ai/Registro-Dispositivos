@@ -86,6 +86,11 @@ function renderTabla() {
   let html = '';
   filtrados.forEach(m => {
     const fecha = new Date(m.fecha).toLocaleString('es-ES');
+    
+    let repuestosHtml = '';
+    if(m.repuestos_usados) {
+      repuestosHtml = `<br><span style="font-size:0.65rem; color:var(--warning);">Repuestos: ${escapeHtml(m.repuestos_usados)}</span>`;
+    }
 
     const solucionHtml = `
       <div style="display:flex; align-items:center; gap:6px;">
@@ -93,6 +98,7 @@ function renderTabla() {
           ${m.solucion ? escapeHtml(m.solucion) : 'Pendiente por resolver'}
         </span>
         <button class="btn-inline btn-edit-solucion" data-id="${m.id}" data-solucion="${escapeHtml(m.solucion || '')}" title="Modificar Solucion">${SVG_PENCIL}</button>
+        ${repuestosHtml}
       </div>
     `;
 
