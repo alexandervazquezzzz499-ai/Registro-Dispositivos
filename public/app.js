@@ -2,7 +2,7 @@ let devices = [];
 let currentUser = null;
 let importRows = [];
 let currentMaintenanceDeviceId = null;
-let lastNotifTime = 0; // Control para las ventanas emergentes
+let lastNotifTime = 0;
 
 const PALABRAS_GROSERAS = ['mierda', 'pendejo', 'cabron', 'cabrón', 'verga', 'coño', 'joder', 'estupido', 'estúpido', 'idiota', 'culero', 'marico', 'maricón', 'zorra', 'perra', 'gonorrea', 'malparido', 'hijueputa', 'imbecil', 'imbécil'];
 
@@ -170,7 +170,6 @@ function mostrarConfirmacion(mensaje, callbackAceptar, esEliminar = false) {
 
 function cerrarConfirmacion() { confirmModalOverlay.classList.remove('active'); }
 
-// LÓGICA DE NOTIFICACIONES
 async function cargarNotificaciones(isInitial = false) {
   try {
     const notifs = await apiFetch('/api/notificaciones');
@@ -227,7 +226,6 @@ function showNotifPopup(notif) {
   
   notifPopupContainer.appendChild(div);
   
-  // La ventana emergente dura 5 segundos en pantalla
   setTimeout(() => {
     div.style.animation = 'fadeOut 0.3s ease forwards';
     setTimeout(() => div.remove(), 300);
@@ -246,7 +244,6 @@ async function abrirModalUsuarios() {
         ? '<span style="color:var(--text-subtle); font-size:0.75rem;">Tú</span>'
         : `<button class="btn-icon delete-user" data-id="${u.id}" data-nombre="${escapeHtml(u.nombre)}" title="Eliminar">${SVG_TRASH}</button>`;
 
-      // CAMBIO VISUAL: El rol "usuario" ahora se muestra como "Técnico"
       const rolLabel = u.rol === 'admin' ? '<span class="badge badge-asignado">Admin</span>' : '<span class="badge badge-activo">Técnico</span>';
 
       html += `
@@ -389,6 +386,7 @@ function renderTable() {
       ? `<button class="btn-icon maintenance" data-id="${d.id}" title="Mantenimiento"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg></button>`
       : `<button class="btn-icon unblock" data-id="${d.id}" title="Desbloquear Equipo" style="color:#F43F5E;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg></button>`;
 
+    // AQUÍ SE INTERCAMBIÓ EL ORDEN (Edit va antes que Maintenance)
     html += `
       <tr data-id="${d.id}">
         <td style="font-weight: 500;">${escapeHtml(d.fabricante || '—')} ${escapeHtml(d.modelo || '')}</td>
@@ -401,8 +399,8 @@ function renderTable() {
           <div class="actions">
             ${btnNota}
             <button class="btn-icon qr" data-id="${d.id}" title="Ver Código QR"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></button>
-            ${btnMaintenance}
             <button class="btn-icon edit" data-id="${d.id}" title="Editar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg></button>
+            ${btnMaintenance}
             <button class="btn-icon delete" data-id="${d.id}" title="Eliminar">${SVG_TRASH}</button>
           </div>
         </td>
@@ -958,7 +956,6 @@ function initEvents() {
     if (!data.autenticado) { window.location.href = '/login.html'; return; }
     currentUser = data.usuario;
     
-    // CAMBIO VISUAL EN EL HEADER: "Técnico" en vez de "usuario"
     document.getElementById('userName').textContent = currentUser.nombre;
     document.getElementById('userRole').textContent = currentUser.rol === 'usuario' ? 'Técnico' : 'Administrador';
     document.getElementById('userAvatar').textContent = currentUser.nombre.charAt(0).toUpperCase();
@@ -971,13 +968,12 @@ function initEvents() {
 
   initEvents();
   await cargarDispositivos();
-  await cargarNotificaciones(true); // Carga inicial silenciosa
+  await cargarNotificaciones(true);
   
   setInterval(() => { 
     cargarDispositivos(true); 
   }, 10000);
   
-  // Polling rápido (cada 5 segundos) para notificaciones "en tiempo real"
   setInterval(() => {
     cargarNotificaciones();
   }, 5000);
